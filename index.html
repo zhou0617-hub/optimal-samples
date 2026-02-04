@@ -2,346 +2,1072 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>最优样本选择系统</title>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: -apple-system, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            /* 改为鲜艳的科技蓝青渐变 */
             background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%);
             min-height: 100vh;
-            padding: 15px;
+            padding: 20px;
         }
-        .app {
-            max-width: 500px;
+        
+        .container {
+            max-width: 1600px;
             margin: 0 auto;
             background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
         }
-        h1 {
-            text-align: center;
-            color: #0083b0;
-            margin-bottom: 20px;
-            font-size: 22px;
-        }
-        .section {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-left: 4px solid #00c9ff;
-        }
-        .btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #00c9ff 0%, #0083b0 100%);
+        
+        .header {
+            /* 改为深青到蓝的鲜艳配色 */
+            background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
             color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 500;
-            margin: 10px 0;
-            cursor: pointer;
+            padding: 30px;
+            text-align: center;
         }
-        .samples {
+        
+        .header h1 { font-size: 26px; margin-bottom: 10px; }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            min-height: 750px;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+        
+        .control-panel {
+            background: #f8f9fa;
+            border-right: 1px solid #e4e7ed;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+        
+        .panel-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+        
+        .section-title {
+            font-size: 16px;
+            /* 改为鲜艳的青色 */
+            color: #0083b0;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .param-row { margin-bottom: 15px; }
+        
+        .param-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #606266;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .param-hint {
+            font-size: 12px;
+            color: #909399;
+            margin-top: 5px;
+        }
+        
+        .sample-tags {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin: 10px 0;
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
             padding: 10px;
+            background: #f5f7fa;
+            border-radius: 4px;
+        }
+        
+        .action-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .content-area {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 90vh;
             background: white;
-            border-radius: 8px;
         }
-        .tag {
-            padding: 6px 12px;
-            background: #00c9ff;
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            /* 改为亮青蓝 */
+            background: linear-gradient(135deg, #00c9ff 0%, #dfffa8 100%);
             color: white;
-            border-radius: 15px;
-            font-size: 14px;
-        }
-        textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
+            padding: 20px;
             border-radius: 8px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
             margin: 10px 0;
-            font-size: 14px;
         }
-        .results {
-            margin-top: 15px;
+        
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
         }
-        .result-item {
-            background: #e6f7ff;
+        
+        .result-card {
+            border: 1px solid #e4e7ed;
             border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-left: 4px solid #92fe9d;
+            padding: 15px;
+            background: white;
+            transition: all 0.3s;
+            /* 改为鲜艳的青色边框 */
+            border-left: 4px solid #effe7f;
         }
-        .loading {
+        
+        .result-samples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        
+        /* DB管理样式 */
+        .db-list {
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .db-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f5f7fa;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            /* 改为鲜艳的橙黄色 */
+            border-left: 4px solid #fcbc80;
+            transition: all 0.3s;
+        }
+        
+        .db-item:hover {
+            background: #e6f7ff;
+            transform: translateX(5px);
+        }
+        
+        .db-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .db-filename {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        
+        .db-meta {
+            font-size: 12px;
+            color: #909399;
+            margin-top: 4px;
+        }
+        
+        .db-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        
+        .filename-format {
+            background: #f0f9ff;
+            border: 1px dashed #00c9ff;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #bec0c5;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        
+        .algo-log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f7fa;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .loading-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(255,255,255,0.95);
-            display: none;
+            display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 9999;
         }
-        .spinner {
-            width: 40px;
-            height: 40px;
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
             border: 4px solid #f3f3f3;
+            /* 改为青色 */
             border-top: 4px solid #00c9ff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .param-row {
-            margin-bottom: 15px;
+        
+        .input-area {
+            margin-top: 10px;
         }
-        .param-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: #555;
-        }
-        input[type="range"] {
+        
+        textarea {
             width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: #ddd;
-            outline: none;
+            padding: 8px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            font-family: monospace;
+            resize: vertical;
         }
-        .value {
-            color: #0083b0;
-            font-weight: bold;
+        
+        .db-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #e6f7ff;
+            /* 改为青色 */
+            color: #00c9ff;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 8px;
         }
     </style>
 </head>
 <body>
-    <div class="app">
-        <h1>📊 最优样本选择系统</h1>
-        
-        <!-- 参数设置 -->
-        <div class="section">
-            <h3>⚙️ 参数设置</h3>
-            <div class="param-row">
-                <div class="param-label">
-                    <span>总样本数 (m):</span>
-                    <span id="m-value" class="value">30</span>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>最优样本选择系统</h1>
+                <div style="margin-top: 8px; font-size: 13px; opacity: 0.9;">
+                    支持历史记录保存/加载/删除 | 文件名格式: m-n-k-j-s-lambda-x-y
                 </div>
-                <input type="range" id="m-slider" min="10" max="100" value="30">
             </div>
-            <div class="param-row">
-                <div class="param-label">
-                    <span>选择样本数 (n):</span>
-                    <span id="n-value" class="value">8</span>
-                </div>
-                <input type="range" id="n-slider" min="2" max="30" value="8">
-            </div>
-            <div class="param-row">
-                <div class="param-label">
-                    <span>小组大小 (k):</span>
-                    <span id="k-value" class="value">5</span>
-                </div>
-                <input type="range" id="k-slider" min="2" max="15" value="5">
-            </div>
-        </div>
-        
-        <!-- 样本选择 -->
-        <div class="section">
-            <h3>🎯 样本选择</h3>
-            <button class="btn" onclick="randomSelect()">🎲 随机选择样本</button>
             
-            <textarea id="manual-input" placeholder="或手动输入样本编号，用逗号分隔：1, 3, 5, 7, 9, 11"></textarea>
-            <button class="btn" style="background:linear-gradient(135deg, #92fe9d 0%, #11998e 100%);" onclick="useManual()">
-                ✅ 使用手动输入
-            </button>
-            
-            <div id="samples-display" class="samples">
-                <!-- 样本标签会显示在这里 -->
+            <div class="main-layout">
+                <!-- 左侧面板 -->
+                <div class="control-panel">
+                    <!-- 参数设置 -->
+                    <div class="panel-section">
+                        <div class="section-title">
+                            <span>参数设置</span>
+                        </div>
+                        
+                        <div class="param-row">
+                            <label class="param-label">总样本数 (m)</label>
+                            <el-slider v-model="params.m" :min="1" :max="100" show-input></el-slider>
+                        </div>
+                        
+                        <div class="param-row">
+                            <label class="param-label">选择样本数 (n)</label>
+                            <el-slider v-model="params.n" :min="2" :max="30" show-input></el-slider>
+                        </div>
+                        
+                        <div class="param-row">
+                            <label class="param-label">小组大小 (k)</label>
+                            <el-slider v-model="params.k" :min="2" :max="15" show-input></el-slider>
+                        </div>
+                        
+                        <div class="param-row">
+                            <label class="param-label">观察子集 (j)</label>
+                            <el-slider v-model="params.j" :min="params.s" :max="params.k" show-input></el-slider>
+                        </div>
+                        
+                        <div class="param-row">
+                            <label class="param-label">覆盖强度 (s)</label>
+                            <el-slider v-model="params.s" :min="1" :max="params.j" show-input></el-slider>
+                        </div>
+                        
+                        <div class="param-row">
+                            <label class="param-label">覆盖数 (λ)</label>
+                            <el-slider v-model="params.lambda" :min="1" :max="20" show-input></el-slider>
+                        </div>
+                        
+                        <el-alert
+                            v-if="!isParamsValid"
+                            title="参数错误: 需满足 s ≤ j ≤ k ≤ n ≤ m"
+                            type="error"
+                            :closable="false"
+                            style="margin-top: 10px;">
+                        </el-alert>
+                    </div>
+                    
+                    <!-- 样本选择 -->
+                    <div class="panel-section">
+                        <div class="section-title">
+                            <span>样本选择 (n={{ params.n }})</span>
+                        </div>
+                        
+                        <div class="action-btn-group">
+                            <el-button type="primary" @click="randomSelect" :disabled="!isParamsValid">
+                                随机选择 {{ params.n }} 个样本
+                            </el-button>
+                        </div>
+                        
+                        <div class="input-area">
+                            <div class="param-label" style="margin-top: 15px;">
+                                或手动输入样本（逗号/空格/换行分隔）：
+                            </div>
+                            <textarea 
+                                v-model="manualInputText" 
+                                rows="3" 
+                                placeholder="例如: 1, 2, 3, 4, 5, 6, 7, 8"
+                                @input="parseManualInput"></textarea>
+                            <el-button 
+                                type="success" 
+                                size="small" 
+                                style="margin-top: 8px; width: 100%;"
+                                @click="confirmManualInput"
+                                :disabled="parsedSamples.length === 0">
+                                确认使用这 {{ parsedSamples.length }} 个样本
+                            </el-button>
+                        </div>
+                        
+                        <div v-if="selectedSamples.length > 0" style="margin-top: 15px;">
+                            <div class="param-label">
+                                当前已选样本:
+                                <span class="db-badge">{{ selectedSamples.length }}个</span>
+                            </div>
+                            <div class="sample-tags">
+                                <el-tag 
+                                    v-for="s in selectedSamples" 
+                                    :key="s"
+                                    effect="dark"
+                                    size="small"
+                                    closable
+                                    @close="removeSample(s)">
+                                    {{ s }}
+                                </el-tag>
+                            </div>
+                            <el-button 
+                                type="warning" 
+                                size="small" 
+                                style="margin-top: 10px;"
+                                @click="clearSamples">
+                                清空重选
+                            </el-button>
+                        </div>
+                    </div>
+                    
+                    <!-- 计算控制 -->
+                    <div class="panel-section">
+                        <div class="section-title">
+                            <span>计算控制</span>
+                        </div>
+                        
+                        <el-button 
+                            type="success" 
+                            size="large" 
+                            @click="startCalculate" 
+                            :disabled="!canCalculate"
+                            :loading="calculating"
+                            style="width: 100%;">
+                            {{ calculating ? '计算中...' : '开始计算最优解' }}
+                        </el-button>
+                        
+                        <div v-if="calculating" style="margin-top: 10px;">
+                            <el-progress :percentage="calcProgress" :stroke-width="10"></el-progress>
+                            <div style="font-size: 12px; color: #909399; text-align: center; margin-top: 5px;">
+                                {{ statusText }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 保存功能 -->
+                    <div class="panel-section">
+                        <div class="section-title">
+                            <span>历史记录</span>
+                        </div>
+                        
+                        <div class="filename-format">
+                            文件名格式:<br>
+                            {{ params.m }}-{{ params.n }}-{{ params.k }}-{{ params.j }}-{{ params.s }}-{{ params.lambda }}-x-y<br>
+                            <span style="color: #999;">
+                                (x=运行次数, y=结果组数)
+                            </span>
+                        </div>
+                        
+                        <el-button 
+                            type="primary" 
+                            style="width: 100%; margin-top: 10px;"
+                            @click="saveToDB"
+                            :disabled="results.length === 0">
+                            保存计算参数与结果
+                        </el-button>
+                        
+                        <div v-if="lastSavedFile" style="margin-top: 10px; padding: 8px; background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 4px; font-size: 12px; color: #52c41a;">
+                            ✓ 已保存: {{ lastSavedFile }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 右侧内容区 -->
+                <div class="content-area">
+                    <!-- DB文件列表管理 -->
+                    <div class="panel-section" v-if="dbFiles.length > 0" style="margin-bottom: 20px;">
+                        <div class="section-title">
+                            <span>历史记录 ({{ dbFiles.length }}个文件)</span>
+                        </div>
+                        
+                        <div class="param-hint" style="margin-bottom: 10px;">
+                            点击"加载"将历史记录的结果显示到下方屏幕，点击"删除"移除文件
+                        </div>
+                        
+                        <div class="db-list">
+                            <div v-for="file in dbFiles" :key="file.id" class="db-item">
+                                <div class="db-info">
+                                    <div class="db-filename">{{ file.filename }}</div>
+                                    <div class="db-meta">
+                                        保存时间: {{ file.timestamp }} | 
+                                        样本: {{ file.samples.join(', ') }} | 
+                                        结果: {{ file.resultCount }}组
+                                    </div>
+                                </div>
+                                <div class="db-actions">
+                                    <el-button type="primary" size="small" @click="executeDB(file)">
+                                        加载
+                                    </el-button>
+                                    <el-button type="danger" size="small" @click="deleteDB(file.id)">
+                                        删除
+                                    </el-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-else class="panel-section" style="margin-bottom: 20px; background: #fafafa;">
+                        <div class="section-title">
+                            <span>历史记录</span>
+                        </div>
+                        <div style="text-align: center; color: #999; padding: 20px;">
+                            暂无历史记录，请计算并保存结果
+                        </div>
+                    </div>
+                    
+                    <!-- 计算统计 - 鲜艳配色 -->
+                    <div class="stats-cards" v-if="results.length > 0">
+                        <div class="stat-card">
+                            <div class="stat-label">生成组数 (y)</div>
+                            <div class="stat-value">{{ results.length }}</div>
+                        </div>
+                        <!-- 改为橙红色替代粉色 -->
+                        <div class="stat-card" style="background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);">
+                            <div class="stat-label">覆盖满足率</div>
+                            <div class="stat-value">{{ coverageStats.satisfiedRate.toFixed(1) }}%</div>
+                            <div style="font-size: 12px; margin-top: 5px;">
+                                {{ coverageStats.satisfied }}/{{ coverageStats.totalJ }} 满足 λ≥{{ params.lambda }}
+                            </div>
+                        </div>
+                        <!-- 改为翠绿替代青绿 -->
+                        <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                            <div class="stat-label">计算耗时</div>
+                            <div class="stat-value">{{ executionTime.toFixed(2) }}s</div>
+                        </div>
+                        <!-- 改为金黄替代橙黄 -->
+                        <div class="stat-card" style="background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);">
+                            <div class="stat-label">当前运行次数</div>
+                            <div class="stat-value">#{{ currentRunCount }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 日志 -->
+                    <div class="algo-log" v-if="algoLog.length > 0">
+                        <div v-for="(log, idx) in algoLog.slice(-30)" :key="idx">
+                            <span style="color: #909399;">[{{ log.time }}]</span>
+                            <span :style="{color: log.color || '#606266'}">{{ log.message }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 当前/加载的结果展示 -->
+                    <div v-if="results.length > 0" style="margin-top: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="color: #2c3e50;">
+                                结果展示 (k={{ params.k }})
+                                <span v-if="currentDBFile" class="db-badge">来自: {{ currentDBFile }}</span>
+                            </h3>
+                            <el-button type="primary" size="small" @click="exportResult">导出TXT</el-button>
+                        </div>
+                        
+                        <div class="result-grid">
+                            <div v-for="(group, idx) in results" :key="idx" class="result-card">
+                                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">
+                                    Group {{ idx + 1 }}
+                                </div>
+                                <div class="result-samples">
+                                    <el-tag 
+                                        v-for="sample in group.samples" 
+                                        :key="sample"
+                                        type="primary"
+                                        effect="plain"
+                                        size="small">
+                                        {{ sample }}
+                                    </el-tag>
+                                </div>
+                                <div style="margin-top: 8px; font-size: 12px; color: #909399;">
+                                    覆盖 {{ group.coveredJSubsetCount || calculateCoveredCount(group.samples) }} 个j-子集
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="results.length === 0 && !calculating" style="text-align: center; padding: 60px 20px; color: #909399;">
+                        <div style="font-size: 60px; margin-bottom: 20px;">📋</div>
+                        <h3 style="margin-bottom: 10px;">等待计算或加载历史记录</h3>
+                        <p>1. 设置参数并计算保存到<br>2. 或从上方列表加载已有结果</p>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- 计算 -->
-        <div class="section">
-            <h3>🚀 计算控制</h3>
-            <button class="btn" onclick="calculate()" id="calc-btn">开始计算</button>
+        <div v-if="calculating" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <div style="margin-top: 20px; color: #606266;">{{ statusText }}</div>
         </div>
-        
-        <!-- 结果展示 -->
-        <div class="section results" id="results-section" style="display:none;">
-            <h3>📋 计算结果</h3>
-            <div id="results-container"></div>
-        </div>
-        
-        <!-- 说明 -->
-        <div class="section" style="background:#f0f9ff; border-color:#92fe9d;">
-            <h3>💡 使用说明</h3>
-            <p style="font-size:13px; color:#666; line-height:1.5;">
-                1. 拖动滑块设置参数<br>
-                2. 点击"随机选择"或手动输入样本<br>
-                3. 点击"开始计算"获得分组结果<br>
-                4. 手机浏览器中可添加到主屏幕
-            </p>
-        </div>
-    </div>
-    
-    <!-- 加载动画 -->
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <div style="margin-top:15px; color:#0083b0;">计算中...</div>
     </div>
 
     <script>
-        // 全局变量
-        let params = { m: 30, n: 8, k: 5 };
-        let selectedSamples = [];
+        const { createApp, ref, computed, onMounted } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
         
-        // 初始化滑块
-        function initSliders() {
-            const sliders = ['m', 'n', 'k'];
-            sliders.forEach(id => {
-                const slider = document.getElementById(`${id}-slider`);
-                const value = document.getElementById(`${id}-value`);
+        const App = {
+            setup() {
+                // 参数和样本
+                const params = ref({ m: 45, n: 8, k: 6, j: 4, s: 4, lambda: 1 });
+                const selectedSamples = ref([]);
+                const manualInputText = ref('');
+                const parsedSamples = ref([]);
+                const results = ref([]);
+                const calculating = ref(false);
+                const calcProgress = ref(0);
+                const statusText = ref('');
+                const coverageStats = ref({ satisfiedRate: 0, satisfied: 0, totalJ: 0 });
+                const executionTime = ref(0);
+                const algoLog = ref([]);
+                const currentRunCount = ref(0);
+                const lastSavedFile = ref('');
+                const currentDBFile = ref(''); // 标记当前显示的是否来自DB
                 
-                slider.addEventListener('input', function() {
-                    params[id] = parseInt(this.value);
-                    value.textContent = params[id];
+                // DB文件列表
+                const dbFiles = ref([]);
+                const DB_STORAGE_KEY = 'optimal_samples_db_files';
+                
+                // 验证
+                const isParamsValid = computed(() => {
+                    const p = params.value;
+                    return p.s <= p.j && p.j <= p.k && p.k <= p.n && p.n <= p.m && p.lambda >= 1;
                 });
-            });
-        }
-        
-        // 随机选择样本
-        function randomSelect() {
-            const arr = Array.from({length: params.m}, (_, i) => i + 1);
-            // 随机打乱
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
+                
+                const canCalculate = computed(() => {
+                    return isParamsValid.value && 
+                           selectedSamples.value.length === params.value.n && 
+                           !calculating.value;
+                });
+                
+                // 日志
+                const log = (msg, color) => {
+                    const time = new Date().toLocaleTimeString();
+                    algoLog.value.push({ time, message: msg, color });
+                    if (algoLog.value.length > 50) algoLog.value.shift();
+                };
+                
+                // 解析手动输入
+                const parseManualInput = () => {
+                    const text = manualInputText.value;
+                    const nums = text.split(/[,\s\n]+/)
+                        .map(s => parseInt(s.trim()))
+                        .filter(n => !isNaN(n) && n >= 1 && n <= params.value.m);
+                    const unique = [...new Set(nums)].sort((a, b) => a - b);
+                    parsedSamples.value = unique;
+                };
+                
+                const confirmManualInput = () => {
+                    if (parsedSamples.value.length === 0) {
+                        ElMessage.warning('请输入有效的样本编号');
+                        return;
+                    }
+                    if (parsedSamples.value.length < params.value.k) {
+                        ElMessage.error(`样本数(${parsedSamples.value.length})不能小于k(${params.value.k})`);
+                        return;
+                    }
+                    selectedSamples.value = [...parsedSamples.value];
+                    params.value.n = selectedSamples.value.length;
+                    manualInputText.value = '';
+                    parsedSamples.value = [];
+                    ElMessage.success(`已设置 ${params.value.n} 个样本`);
+                };
+                
+                const randomSelect = () => {
+                    const arr = Array.from({length: params.value.m}, (_, i) => i + 1);
+                    for (let i = arr.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [arr[i], arr[j]] = [arr[j], arr[i]];
+                    }
+                    selectedSamples.value = arr.slice(0, params.value.n).sort((a, b) => a - b);
+                    log(`随机选择: [${selectedSamples.value.join(', ')}]`);
+                    ElMessage.success(`已随机选择 ${params.value.n} 个样本`);
+                };
+                
+                const removeSample = (s) => {
+                    selectedSamples.value = selectedSamples.value.filter(x => x !== s);
+                    params.value.n = selectedSamples.value.length;
+                };
+                
+                const clearSamples = () => {
+                    selectedSamples.value = [];
+                    params.value.n = 0;
+                };
+                
+                // 组合数学函数
+                const generateCombinations = (arr, k) => {
+                    const result = [];
+                    const n = arr.length;
+                    if (k > n || k <= 0) return result;
+                    const indices = Array(k).fill(0).map((_, i) => i);
+                    while (true) {
+                        result.push(indices.map(i => arr[i]));
+                        let i = k - 1;
+                        while (i >= 0 && indices[i] === n - k + i) i--;
+                        if (i < 0) break;
+                        indices[i]++;
+                        for (let j = i + 1; j < k; j++) indices[j] = indices[j-1] + 1;
+                    }
+                    return result;
+                };
+                
+                const isSubset = (small, large) => {
+                    const set = new Set(large);
+                    return small.every(x => set.has(x));
+                };
+                
+                // 核心算法
+                const generalCoveringDesign = (samples, k, j, s, lambda) => {
+                    const startTime = performance.now();
+                    const n = samples.length;
+                    log(`开始计算: C(${n},${k})选组, 覆盖C(${n},${j}), λ=${lambda}`);
+                    
+                    const allKGroups = generateCombinations(samples, k);
+                    const allJSubsets = generateCombinations(samples, j);
+                    const totalJ = allJSubsets.length;
+                    
+                    const jSubsetSSubsets = allJSubsets.map(jSub => 
+                        generateCombinations(jSub, s).map(arr => arr.join(','))
+                    );
+                    
+                    log(`空间: ${allKGroups.length}个k-组, ${totalJ}个j-子集`);
+                    
+                    const groupStructs = allKGroups.map((group, idx) => {
+                        const covers = Array(totalJ).fill(null).map(() => new Set());
+                        const groupSSubs = generateCombinations(group, s);
+                        groupSSubs.forEach(sSub => {
+                            const sKey = sSub.join(',');
+                            allJSubsets.forEach((jSub, jIdx) => {
+                                if (isSubset(sSub, jSub)) {
+                                    const sIdx = jSubsetSSubsets[jIdx].indexOf(sKey);
+                                    if (sIdx !== -1) covers[jIdx].add(sIdx);
+                                }
+                            });
+                        });
+                        return { idx, group, covers };
+                    }).filter(g => g.covers.some(set => set.size > 0));
+                    
+                    // 多起点贪心
+                    let bestSolution = null;
+                    let bestSize = Infinity;
+                    
+                    for (let start = 0; start < 10; start++) {
+                        let candidates = [...groupStructs].sort(() => Math.random() - 0.5);
+                        let selected = [];
+                        let coverState = Array(totalJ).fill(null).map(() => new Set());
+                        
+                        let iter = 0;
+                        while (iter < 1000) {
+                            iter++;
+                            let maxDeficit = 0;
+                            let targetJ = -1;
+                            for (let i = 0; i < totalJ; i++) {
+                                const deficit = lambda - coverState[i].size;
+                                if (deficit > maxDeficit) {
+                                    maxDeficit = deficit;
+                                    targetJ = i;
+                                }
+                            }
+                            if (maxDeficit === 0) break;
+                            
+                            let bestGroup = null;
+                            let bestScore = -Infinity;
+                            
+                            for (const g of candidates) {
+                                if (selected.includes(g.idx)) continue;
+                                let contribution = 0;
+                                for (let ji = 0; ji < totalJ; ji++) {
+                                    const needed = lambda - coverState[ji].size;
+                                    if (needed <= 0) continue;
+                                    let newCov = 0;
+                                    for (const sIdx of g.covers[ji]) {
+                                        if (!coverState[ji].has(sIdx)) newCov++;
+                                    }
+                                    contribution += Math.min(newCov, needed);
+                                }
+                                if (contribution <= 0) continue;
+                                if (g.covers[targetJ].size > 0) contribution += 0.5;
+                                
+                                if (contribution > bestScore) {
+                                    bestScore = contribution;
+                                    bestGroup = g;
+                                }
+                            }
+                            
+                            if (!bestGroup) break;
+                            
+                            selected.push(bestGroup.idx);
+                            for (let i = 0; i < totalJ; i++) {
+                                for (const sIdx of bestGroup.covers[i]) coverState[i].add(sIdx);
+                            }
+                        }
+                        
+                        // 修复
+                        for (let repair = 0; repair < 200; repair++) {
+                            let violated = [];
+                            for (let i = 0; i < totalJ; i++) {
+                                if (coverState[i].size < lambda) violated.push(i);
+                            }
+                            if (violated.length === 0) break;
+                            
+                            for (const vIdx of violated.slice(0, 5)) {
+                                let bestRepair = null;
+                                let bestNewCov = 0;
+                                for (const g of groupStructs) {
+                                    if (selected.includes(g.idx)) continue;
+                                    let newCov = 0;
+                                    for (const sIdx of g.covers[vIdx]) {
+                                        if (!coverState[vIdx].has(sIdx)) newCov++;
+                                    }
+                                    if (newCov > bestNewCov) {
+                                        bestNewCov = newCov;
+                                        bestRepair = g;
+                                    }
+                                }
+                                if (bestRepair) {
+                                    selected.push(bestRepair.idx);
+                                    for (let i = 0; i < totalJ; i++) {
+                                        for (const sIdx of bestRepair.covers[i]) coverState[i].add(sIdx);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 优化
+                        let improved = true;
+                        while (improved) {
+                            improved = false;
+                            for (let i = selected.length - 1; i >= 0; i--) {
+                                const test = selected.filter((_, idx) => idx !== i);
+                                if (verifySolution(test, groupStructs, totalJ, lambda)) {
+                                    selected = test;
+                                    improved = true;
+                                }
+                            }
+                        }
+                        
+                        // 2换1
+                        improved = true;
+                        while (improved) {
+                            improved = false;
+                            outer:
+                            for (let i = 0; i < selected.length - 1; i++) {
+                                for (let j = i + 1; j < selected.length; j++) {
+                                    const rest = selected.filter((_, idx) => idx !== i && idx !== j);
+                                    for (const cand of groupStructs) {
+                                        if (selected.includes(cand.idx)) continue;
+                                        const test = [...rest, cand.idx];
+                                        if (verifySolution(test, groupStructs, totalJ, lambda)) {
+                                            selected = test;
+                                            improved = true;
+                                            break outer;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (selected.length < bestSize) {
+                            bestSize = selected.length;
+                            bestSolution = [...selected];
+                        }
+                    }
+                    
+                    if (!bestSolution) throw new Error("未找到可行解");
+                    
+                    const resultGroups = bestSolution.map((idx, i) => {
+                        const g = groupStructs.find(x => x.idx === idx);
+                        let coveredCount = 0;
+                        for (let ji = 0; ji < totalJ; ji++) {
+                            if (g.covers[ji].size > 0) coveredCount++;
+                        }
+                        return { id: i + 1, samples: g.group, coveredJSubsetCount: coveredCount };
+                    });
+                    
+                    const finalCover = Array(totalJ).fill(null).map(() => new Set());
+                    for (const idx of bestSolution) {
+                        const g = groupStructs.find(x => x.idx === idx);
+                        for (let i = 0; i < totalJ; i++) {
+                            for (const sIdx of g.covers[i]) finalCover[i].add(sIdx);
+                        }
+                    }
+                    
+                    let satisfied = 0;
+                    for (let i = 0; i < totalJ; i++) {
+                        if (finalCover[i].size >= lambda) satisfied++;
+                    }
+                    
+                    executionTime.value = (performance.now() - startTime) / 1000;
+                    
+                    coverageStats.value = {
+                        satisfiedRate: (satisfied / totalJ) * 100,
+                        satisfied,
+                        totalJ
+                    };
+                    
+                    return resultGroups;
+                };
+                
+                const verifySolution = (selectedIndices, groupStructs, totalJ, lambda) => {
+                    const cover = Array(totalJ).fill(null).map(() => new Set());
+                    for (const idx of selectedIndices) {
+                        const g = groupStructs.find(x => x.idx === idx);
+                        if (!g) return false;
+                        for (let i = 0; i < totalJ; i++) {
+                            for (const sIdx of g.covers[i]) cover[i].add(sIdx);
+                        }
+                    }
+                    return cover.every(c => c.size >= lambda);
+                };
+                
+                // 计算覆盖数（用于DB加载后的显示）
+                const calculateCoveredCount = (groupSamples) => {
+                    // 简化计算，仅用于显示
+                    return params.value.j; 
+                };
+                
+                // 计算
+                const startCalculate = async () => {
+                    if (!canCalculate.value) return;
+                    
+                    calculating.value = true;
+                    algoLog.value = [];
+                    currentDBFile.value = ''; // 清除DB标记，表示是新计算
+                    
+                    try {
+                        const res = await new Promise((resolve, reject) => {
+                            setTimeout(() => {
+                                try {
+                                    const result = generalCoveringDesign(
+                                        selectedSamples.value,
+                                        params.value.k,
+                                        params.value.j,
+                                        params.value.s,
+                                        params.value.lambda
+                                    );
+                                    resolve(result);
+                                } catch (e) {
+                                    reject(e);
+                                }
+                            }, 100);
+                        });
+                        
+                        results.value = res;
+                        currentRunCount.value++;
+                        ElMessage.success(`计算完成: ${res.length} 组`);
+                        
+                    } catch (error) {
+                        ElMessage.error('计算错误: ' + error.message);
+                    } finally {
+                        calculating.value = false;
+                    }
+                };
+                
+                // DB功能
+                const generateDBFilename = () => {
+                    const p = params.value;
+                    const x = currentRunCount.value;
+                    const y = results.value.length;
+                    return `${p.m}-${p.n}-${p.k}-${p.j}-${p.s}-${p.lambda}-${x}-${y}`;
+                };
+                
+                const saveToDB = () => {
+                    if (results.value.length === 0) {
+                        ElMessage.warning('没有可保存的结果');
+                        return;
+                    }
+                    
+                    const filename = generateDBFilename();
+                    const dbRecord = {
+                        id: Date.now(),
+                        filename: filename,
+                        timestamp: new Date().toLocaleString(),
+                        params: { ...params.value },
+                        samples: [...selectedSamples.value],
+                        results: JSON.parse(JSON.stringify(results.value)),
+                        coverageStats: { ...coverageStats.value },
+                        resultCount: results.value.length
+                    };
+                    
+                    dbFiles.value.unshift(dbRecord);
+                    saveDBToStorage();
+                    lastSavedFile.value = filename;
+                    ElMessage.success(`已保存到DB: ${filename}`);
+                };
+                
+                const executeDB = (file) => {
+                    // 加载DB文件到屏幕
+                    params.value = { ...file.params };
+                    selectedSamples.value = [...file.samples];
+                    results.value = JSON.parse(JSON.stringify(file.results));
+                    coverageStats.value = { ...file.coverageStats };
+                    currentDBFile.value = file.filename;
+                    currentRunCount.value = parseInt(file.filename.split('-')[6]) || 0;
+                    ElMessage.success(`已加载DB文件: ${file.filename}`);
+                };
+                
+                const deleteDB = (id) => {
+                    ElMessageBox.confirm('确定要删除这个DB文件吗？', '确认删除', {
+                        confirmButtonText: '删除',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        dbFiles.value = dbFiles.value.filter(f => f.id !== id);
+                        saveDBToStorage();
+                        ElMessage.success('已删除');
+                    }).catch(() => {});
+                };
+                
+                const saveDBToStorage = () => {
+                    localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(dbFiles.value));
+                };
+                
+                const loadDBFromStorage = () => {
+                    const saved = localStorage.getItem(DB_STORAGE_KEY);
+                    if (saved) {
+                        try {
+                            dbFiles.value = JSON.parse(saved);
+                        } catch (e) {
+                            console.error('加载DB失败', e);
+                        }
+                    }
+                };
+                
+                // 导出
+                const exportResult = () => {
+                    let text = `Optimal Samples Selection Result\n`;
+                    text += `File: ${currentDBFile.value || 'New Calculation'}\n`;
+                    text += `Parameters: m=${params.value.m}, n=${params.value.n}, k=${params.value.k}, j=${params.value.j}, s=${params.value.s}, lambda=${params.value.lambda}\n`;
+                    text += `Samples: [${selectedSamples.value.join(', ')}]\n`;
+                    text += `Groups: ${results.value.length}\n`;
+                    text += `Coverage: ${coverageStats.value.satisfiedRate.toFixed(2)}%\n\n`;
+                    
+                    results.value.forEach((g, i) => {
+                        text += `Group ${i+1}: {${g.samples.join(', ')}}\n`;
+                    });
+                    
+                    const blob = new Blob([text], {type: 'text/plain'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${generateDBFilename()}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                };
+                
+                onMounted(() => {
+                    loadDBFromStorage();
+                });
+                
+                return {
+                    params,
+                    selectedSamples,
+                    manualInputText,
+                    parsedSamples,
+                    results,
+                    calculating,
+                    calcProgress,
+                    statusText,
+                    coverageStats,
+                    executionTime,
+                    algoLog,
+                    currentRunCount,
+                    lastSavedFile,
+                    currentDBFile,
+                    dbFiles,
+                    isParamsValid,
+                    canCalculate,
+                    parseManualInput,
+                    confirmManualInput,
+                    randomSelect,
+                    removeSample,
+                    clearSamples,
+                    startCalculate,
+                    saveToDB,
+                    executeDB,
+                    deleteDB,
+                    exportResult,
+                    calculateCoveredCount
+                };
             }
-            selectedSamples = arr.slice(0, params.n).sort((a, b) => a - b);
-            updateSamplesDisplay();
-            alert(`已随机选择 ${params.n} 个样本`);
-        }
-        
-        // 使用手动输入
-        function useManual() {
-            const input = document.getElementById('manual-input').value;
-            const nums = input.split(/[,\s]+/)
-                .map(s => parseInt(s.trim()))
-                .filter(n => !isNaN(n) && n >= 1 && n <= params.m);
-            const unique = [...new Set(nums)].sort((a, b) => a - b);
-            
-            if (unique.length === 0) {
-                alert('请输入有效的样本编号');
-                return;
-            }
-            
-            selectedSamples = unique;
-            params.n = unique.length;
-            document.getElementById('n-slider').value = unique.length;
-            document.getElementById('n-value').textContent = unique.length;
-            document.getElementById('manual-input').value = '';
-            
-            updateSamplesDisplay();
-            alert(`已设置 ${unique.length} 个样本`);
-        }
-        
-        // 更新样本显示
-        function updateSamplesDisplay() {
-            const container = document.getElementById('samples-display');
-            container.innerHTML = '';
-            
-            selectedSamples.forEach(sample => {
-                const tag = document.createElement('div');
-                tag.className = 'tag';
-                tag.textContent = sample;
-                container.appendChild(tag);
-            });
-            
-            // 更新计算按钮状态
-            document.getElementById('calc-btn').disabled = selectedSamples.length === 0;
-        }
-        
-        // 计算函数
-        function calculate() {
-            if (selectedSamples.length === 0) {
-                alert('请先选择样本');
-                return;
-            }
-            
-            // 显示加载动画
-            document.getElementById('loading').style.display = 'flex';
-            
-            // 模拟计算过程
-            setTimeout(() => {
-                generateResults();
-                document.getElementById('loading').style.display = 'none';
-            }, 1500);
-        }
-        
-        // 生成结果
-        function generateResults() {
-            const samples = [...selectedSamples];
-            const k = params.k;
-            const results = [];
-            
-            // 简单分组算法
-            for (let i = 0; i < samples.length; i += k) {
-                const group = samples.slice(i, i + k);
-                if (group.length >= 2) {  // 至少2个样本
-                    results.push([...group]);
-                }
-            }
-            
-            // 如果分组不够，随机生成一些
-            if (results.length < 2) {
-                for (let i = 0; i < 3; i++) {
-                    const shuffled = [...samples].sort(() => Math.random() - 0.5);
-                    results.push(shuffled.slice(0, k));
-                }
-            }
-            
-            displayResults(results);
-        }
-        
-        // 显示结果
-        function displayResults(results) {
-            const container = document.getElementById('results-container');
-            container.innerHTML = '';
-            
-            results.forEach((group, idx) => {
-                const item = document.createElement('div');
-                item.className = 'result-item';
-                item.innerHTML = `
-                    <div style="font-weight:bold; margin-bottom:8px;">第 ${idx + 1} 组</div>
-                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                        ${group.map(s => `<span class="tag" style="background:#0083b0;">${s}</span>`).join('')}
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-            
-            document.getElementById('results-section').style.display = 'block';
-            
-            // 滚动到结果区域
-            document.getElementById('results-section').scrollIntoView({ 
-                behavior: 'smooth' 
-            });
-        }
-        
-        // 初始化
-        window.onload = function() {
-            initSliders();
-            randomSelect(); // 默认随机选择样本
         };
+        
+        createApp(App).use(ElementPlus).mount('#app');
     </script>
 </body>
 </html>
