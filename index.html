@@ -2,1072 +2,693 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>最优样本选择系统</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Covering · Strength s</title>
+    <!-- Vue 3 & Element Plus -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <script src="https://unpkg.com/element-plus"></script>
-    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            /* 改为鲜艳的科技蓝青渐变 */
-            background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%);
-            min-height: 100vh;
-            padding: 20px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        
-        .container {
-            max-width: 1600px;
+        body {
+            background: #f2f5f9;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 24px 20px;
+        }
+        .main-card {
+            max-width: 1320px;
             margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: #ffffff;
+            border-radius: 28px;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.02), 0 2px 6px rgba(0, 0, 0, 0.03);
             overflow: hidden;
         }
-        
-        .header {
-            /* 改为深青到蓝的鲜艳配色 */
-            background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
+        .clean-header {
+            padding: 1rem 2rem;
+            background: #ffffff;
+            border-bottom: 1px solid #eef2f6;
         }
-        
-        .header h1 { font-size: 26px; margin-bottom: 10px; }
-        
-        .main-layout {
-            display: grid;
-            grid-template-columns: 400px 1fr;
-            min-height: 750px;
-        }
-        
-        @media (max-width: 1200px) {
-            .main-layout { grid-template-columns: 1fr; }
-        }
-        
-        .control-panel {
-            background: #f8f9fa;
-            border-right: 1px solid #e4e7ed;
-            padding: 20px;
-            overflow-y: auto;
-            max-height: 90vh;
-        }
-        
-        .panel-section {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-        }
-        
-        .section-title {
-            font-size: 16px;
-            /* 改为鲜艳的青色 */
-            color: #0083b0;
+        .clean-header h1 {
+            font-size: 1.4rem;
             font-weight: 600;
-            margin-bottom: 15px;
+            color: #1f3b4c;
+        }
+        .two-cols {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .settings-panel {
+            width: 350px;
+            background: #ffffff;
+            border-right: 1px solid #edf2f8;
+            padding: 24px 22px;
+        }
+        .result-panel {
+            flex: 1;
+            padding: 24px 28px;
+            background: #ffffff;
+        }
+        .param-block {
+            margin-bottom: 32px;
+        }
+        .block-title {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #2c4f6e;
+            padding-bottom: 8px;
+            margin-bottom: 18px;
+            border-bottom: 1.5px solid #eef2fa;
+        }
+        .param-row {
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
             gap: 8px;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
         }
-        
-        .param-row { margin-bottom: 15px; }
-        
         .param-label {
-            display: block;
-            margin-bottom: 5px;
-            color: #606266;
-            font-size: 14px;
+            font-size: 0.8rem;
             font-weight: 500;
+            color: #3a5e7e;
+            min-width: 70px;
         }
-        
-        .param-hint {
-            font-size: 12px;
-            color: #909399;
-            margin-top: 5px;
-        }
-        
-        .sample-tags {
+        .sample-tag-list {
+            background: #fafcff;
+            border-radius: 18px;
+            padding: 12px;
+            margin-top: 12px;
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-top: 10px;
             max-height: 150px;
             overflow-y: auto;
-            padding: 10px;
-            background: #f5f7fa;
-            border-radius: 4px;
+            border: 1px solid #eef2f8;
         }
-        
-        .action-btn-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        
-        .content-area {
-            padding: 20px;
-            overflow-y: auto;
-            max-height: 90vh;
-            background: white;
-        }
-        
-        .stats-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat-card {
-            /* 改为亮青蓝 */
-            background: linear-gradient(135deg, #00c9ff 0%, #dfffa8 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-        }
-        
-        .stat-value {
-            font-size: 28px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        
-        .result-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 15px;
-        }
-        
-        .result-card {
-            border: 1px solid #e4e7ed;
-            border-radius: 8px;
-            padding: 15px;
-            background: white;
-            transition: all 0.3s;
-            /* 改为鲜艳的青色边框 */
-            border-left: 4px solid #effe7f;
-        }
-        
-        .result-samples {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 10px;
-        }
-        
-        /* DB管理样式 */
-        .db-list {
-            margin-top: 15px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .db-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            background: #f5f7fa;
-            border-radius: 6px;
-            margin-bottom: 10px;
-            /* 改为鲜艳的橙黄色 */
-            border-left: 4px solid #fcbc80;
-            transition: all 0.3s;
-        }
-        
-        .db-item:hover {
-            background: #e6f7ff;
-            transform: translateX(5px);
-        }
-        
-        .db-info {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        .db-filename {
-            font-weight: 600;
-            color: #2c3e50;
-            font-size: 14px;
-            word-break: break-all;
-        }
-        
-        .db-meta {
-            font-size: 12px;
-            color: #909399;
-            margin-top: 4px;
-        }
-        
-        .db-actions {
-            display: flex;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-        
-        .filename-format {
-            background: #f0f9ff;
-            border: 1px dashed #00c9ff;
-            padding: 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            color: #bec0c5;
-            margin-top: 10px;
-            font-family: monospace;
-        }
-        
-        .algo-log {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f5f7fa;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255,255,255,0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #f3f3f3;
-            /* 改为青色 */
-            border-top: 4px solid #00c9ff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .input-area {
-            margin-top: 10px;
-        }
-        
         textarea {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #dcdfe6;
-            border-radius: 4px;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
             font-family: monospace;
+            font-size: 0.8rem;
+            background: #fff;
             resize: vertical;
         }
-        
-        .db-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            background: #e6f7ff;
-            /* 改为青色 */
-            color: #00c9ff;
-            border-radius: 4px;
-            font-size: 11px;
-            margin-left: 8px;
+        .btn-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0 8px;
+        }
+        .stat-row-mini {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+        .stat-piece {
+            background: #f8fbfe;
+            border-radius: 24px;
+            padding: 12px 18px;
+            flex: 1;
+            min-width: 110px;
+            border: 1px solid #eef2f8;
+        }
+        .stat-piece .stat-sm {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #6b86a2;
+        }
+        .stat-piece .stat-num {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #1e3a5f;
+            line-height: 1.2;
+        }
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 18px;
+            margin-top: 18px;
+        }
+        .group-card-mini {
+            background: #ffffff;
+            border: 1px solid #eef2f8;
+            border-radius: 24px;
+            padding: 16px;
+        }
+        .group-card-mini .group-name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #2a577b;
+            border-left: 3px solid #8aaec0;
+            padding-left: 10px;
+            margin-bottom: 12px;
+        }
+        .chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .chip-sample {
+            background: #eff3f8;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #2a577b;
+        }
+        .cover-meta {
+            font-size: 0.7rem;
+            color: #7994b0;
+        }
+        .log-area-light {
+            background: #f9fbfe;
+            border-radius: 20px;
+            padding: 14px;
+            margin-top: 32px;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.7rem;
+            color: #2b4c6e;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #eef2f8;
+        }
+        button.el-button--primary {
+            background-color: #427c9e;
+            border-color: #427c9e;
+            border-radius: 40px;
+        }
+        button.el-button--primary:hover {
+            background-color: #2f6280;
+        }
+        .error-warning {
+            font-size: 0.7rem;
+            background: #fff5f0;
+            padding: 6px 12px;
+            border-radius: 30px;
+            color: #c2410c;
+            margin-top: 10px;
+        }
+        .param-input {
+            width: 130px;
+        }
+        @media (max-width: 760px) {
+            .settings-panel { width: 100%; border-right: none; border-bottom: 1px solid #edf2f8; }
+            .param-row { flex-wrap: wrap; }
         }
     </style>
 </head>
 <body>
-    <div id="app">
-        <div class="container">
-            <div class="header">
-                <h1>最优样本选择系统</h1>
-                <div style="margin-top: 8px; font-size: 13px; opacity: 0.9;">
-                    支持历史记录保存/加载/删除 | 文件名格式: m-n-k-j-s-lambda-x-y
-                </div>
-            </div>
-            
-            <div class="main-layout">
-                <!-- 左侧面板 -->
-                <div class="control-panel">
-                    <!-- 参数设置 -->
-                    <div class="panel-section">
-                        <div class="section-title">
-                            <span>参数设置</span>
-                        </div>
-                        
-                        <div class="param-row">
-                            <label class="param-label">总样本数 (m)</label>
-                            <el-slider v-model="params.m" :min="1" :max="100" show-input></el-slider>
-                        </div>
-                        
-                        <div class="param-row">
-                            <label class="param-label">选择样本数 (n)</label>
-                            <el-slider v-model="params.n" :min="2" :max="30" show-input></el-slider>
-                        </div>
-                        
-                        <div class="param-row">
-                            <label class="param-label">小组大小 (k)</label>
-                            <el-slider v-model="params.k" :min="2" :max="15" show-input></el-slider>
-                        </div>
-                        
-                        <div class="param-row">
-                            <label class="param-label">观察子集 (j)</label>
-                            <el-slider v-model="params.j" :min="params.s" :max="params.k" show-input></el-slider>
-                        </div>
-                        
-                        <div class="param-row">
-                            <label class="param-label">覆盖强度 (s)</label>
-                            <el-slider v-model="params.s" :min="1" :max="params.j" show-input></el-slider>
-                        </div>
-                        
-                        <div class="param-row">
-                            <label class="param-label">覆盖数 (λ)</label>
-                            <el-slider v-model="params.lambda" :min="1" :max="20" show-input></el-slider>
-                        </div>
-                        
-                        <el-alert
-                            v-if="!isParamsValid"
-                            title="参数错误: 需满足 s ≤ j ≤ k ≤ n ≤ m"
-                            type="error"
-                            :closable="false"
-                            style="margin-top: 10px;">
-                        </el-alert>
-                    </div>
-                    
-                    <!-- 样本选择 -->
-                    <div class="panel-section">
-                        <div class="section-title">
-                            <span>样本选择 (n={{ params.n }})</span>
-                        </div>
-                        
-                        <div class="action-btn-group">
-                            <el-button type="primary" @click="randomSelect" :disabled="!isParamsValid">
-                                随机选择 {{ params.n }} 个样本
-                            </el-button>
-                        </div>
-                        
-                        <div class="input-area">
-                            <div class="param-label" style="margin-top: 15px;">
-                                或手动输入样本（逗号/空格/换行分隔）：
-                            </div>
-                            <textarea 
-                                v-model="manualInputText" 
-                                rows="3" 
-                                placeholder="例如: 1, 2, 3, 4, 5, 6, 7, 8"
-                                @input="parseManualInput"></textarea>
-                            <el-button 
-                                type="success" 
-                                size="small" 
-                                style="margin-top: 8px; width: 100%;"
-                                @click="confirmManualInput"
-                                :disabled="parsedSamples.length === 0">
-                                确认使用这 {{ parsedSamples.length }} 个样本
-                            </el-button>
-                        </div>
-                        
-                        <div v-if="selectedSamples.length > 0" style="margin-top: 15px;">
-                            <div class="param-label">
-                                当前已选样本:
-                                <span class="db-badge">{{ selectedSamples.length }}个</span>
-                            </div>
-                            <div class="sample-tags">
-                                <el-tag 
-                                    v-for="s in selectedSamples" 
-                                    :key="s"
-                                    effect="dark"
-                                    size="small"
-                                    closable
-                                    @close="removeSample(s)">
-                                    {{ s }}
-                                </el-tag>
-                            </div>
-                            <el-button 
-                                type="warning" 
-                                size="small" 
-                                style="margin-top: 10px;"
-                                @click="clearSamples">
-                                清空重选
-                            </el-button>
-                        </div>
-                    </div>
-                    
-                    <!-- 计算控制 -->
-                    <div class="panel-section">
-                        <div class="section-title">
-                            <span>计算控制</span>
-                        </div>
-                        
-                        <el-button 
-                            type="success" 
-                            size="large" 
-                            @click="startCalculate" 
-                            :disabled="!canCalculate"
-                            :loading="calculating"
-                            style="width: 100%;">
-                            {{ calculating ? '计算中...' : '开始计算最优解' }}
-                        </el-button>
-                        
-                        <div v-if="calculating" style="margin-top: 10px;">
-                            <el-progress :percentage="calcProgress" :stroke-width="10"></el-progress>
-                            <div style="font-size: 12px; color: #909399; text-align: center; margin-top: 5px;">
-                                {{ statusText }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- 保存功能 -->
-                    <div class="panel-section">
-                        <div class="section-title">
-                            <span>历史记录</span>
-                        </div>
-                        
-                        <div class="filename-format">
-                            文件名格式:<br>
-                            {{ params.m }}-{{ params.n }}-{{ params.k }}-{{ params.j }}-{{ params.s }}-{{ params.lambda }}-x-y<br>
-                            <span style="color: #999;">
-                                (x=运行次数, y=结果组数)
-                            </span>
-                        </div>
-                        
-                        <el-button 
-                            type="primary" 
-                            style="width: 100%; margin-top: 10px;"
-                            @click="saveToDB"
-                            :disabled="results.length === 0">
-                            保存计算参数与结果
-                        </el-button>
-                        
-                        <div v-if="lastSavedFile" style="margin-top: 10px; padding: 8px; background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 4px; font-size: 12px; color: #52c41a;">
-                            ✓ 已保存: {{ lastSavedFile }}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 右侧内容区 -->
-                <div class="content-area">
-                    <!-- DB文件列表管理 -->
-                    <div class="panel-section" v-if="dbFiles.length > 0" style="margin-bottom: 20px;">
-                        <div class="section-title">
-                            <span>历史记录 ({{ dbFiles.length }}个文件)</span>
-                        </div>
-                        
-                        <div class="param-hint" style="margin-bottom: 10px;">
-                            点击"加载"将历史记录的结果显示到下方屏幕，点击"删除"移除文件
-                        </div>
-                        
-                        <div class="db-list">
-                            <div v-for="file in dbFiles" :key="file.id" class="db-item">
-                                <div class="db-info">
-                                    <div class="db-filename">{{ file.filename }}</div>
-                                    <div class="db-meta">
-                                        保存时间: {{ file.timestamp }} | 
-                                        样本: {{ file.samples.join(', ') }} | 
-                                        结果: {{ file.resultCount }}组
-                                    </div>
-                                </div>
-                                <div class="db-actions">
-                                    <el-button type="primary" size="small" @click="executeDB(file)">
-                                        加载
-                                    </el-button>
-                                    <el-button type="danger" size="small" @click="deleteDB(file.id)">
-                                        删除
-                                    </el-button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div v-else class="panel-section" style="margin-bottom: 20px; background: #fafafa;">
-                        <div class="section-title">
-                            <span>历史记录</span>
-                        </div>
-                        <div style="text-align: center; color: #999; padding: 20px;">
-                            暂无历史记录，请计算并保存结果
-                        </div>
-                    </div>
-                    
-                    <!-- 计算统计 - 鲜艳配色 -->
-                    <div class="stats-cards" v-if="results.length > 0">
-                        <div class="stat-card">
-                            <div class="stat-label">生成组数 (y)</div>
-                            <div class="stat-value">{{ results.length }}</div>
-                        </div>
-                        <!-- 改为橙红色替代粉色 -->
-                        <div class="stat-card" style="background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);">
-                            <div class="stat-label">覆盖满足率</div>
-                            <div class="stat-value">{{ coverageStats.satisfiedRate.toFixed(1) }}%</div>
-                            <div style="font-size: 12px; margin-top: 5px;">
-                                {{ coverageStats.satisfied }}/{{ coverageStats.totalJ }} 满足 λ≥{{ params.lambda }}
-                            </div>
-                        </div>
-                        <!-- 改为翠绿替代青绿 -->
-                        <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
-                            <div class="stat-label">计算耗时</div>
-                            <div class="stat-value">{{ executionTime.toFixed(2) }}s</div>
-                        </div>
-                        <!-- 改为金黄替代橙黄 -->
-                        <div class="stat-card" style="background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);">
-                            <div class="stat-label">当前运行次数</div>
-                            <div class="stat-value">#{{ currentRunCount }}</div>
-                        </div>
-                    </div>
-                    
-                    <!-- 日志 -->
-                    <div class="algo-log" v-if="algoLog.length > 0">
-                        <div v-for="(log, idx) in algoLog.slice(-30)" :key="idx">
-                            <span style="color: #909399;">[{{ log.time }}]</span>
-                            <span :style="{color: log.color || '#606266'}">{{ log.message }}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- 当前/加载的结果展示 -->
-                    <div v-if="results.length > 0" style="margin-top: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <h3 style="color: #2c3e50;">
-                                结果展示 (k={{ params.k }})
-                                <span v-if="currentDBFile" class="db-badge">来自: {{ currentDBFile }}</span>
-                            </h3>
-                            <el-button type="primary" size="small" @click="exportResult">导出TXT</el-button>
-                        </div>
-                        
-                        <div class="result-grid">
-                            <div v-for="(group, idx) in results" :key="idx" class="result-card">
-                                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">
-                                    Group {{ idx + 1 }}
-                                </div>
-                                <div class="result-samples">
-                                    <el-tag 
-                                        v-for="sample in group.samples" 
-                                        :key="sample"
-                                        type="primary"
-                                        effect="plain"
-                                        size="small">
-                                        {{ sample }}
-                                    </el-tag>
-                                </div>
-                                <div style="margin-top: 8px; font-size: 12px; color: #909399;">
-                                    覆盖 {{ group.coveredJSubsetCount || calculateCoveredCount(group.samples) }} 个j-子集
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div v-if="results.length === 0 && !calculating" style="text-align: center; padding: 60px 20px; color: #909399;">
-                        <div style="font-size: 60px; margin-bottom: 20px;">📋</div>
-                        <h3 style="margin-bottom: 10px;">等待计算或加载历史记录</h3>
-                        <p>1. 设置参数并计算保存到<br>2. 或从上方列表加载已有结果</p>
-                    </div>
-                </div>
-            </div>
+<div id="app">
+    <div class="main-card">
+        <div class="clean-header">
+            <h1>🎯 Optimal Covering · strength s</h1>
         </div>
-        
-        <div v-if="calculating" class="loading-overlay">
-            <div class="loading-spinner"></div>
-            <div style="margin-top: 20px; color: #606266;">{{ statusText }}</div>
+        <div class="two-cols">
+            <!-- left panel: parameters + samples -->
+            <div class="settings-panel">
+                <div class="param-block">
+                    <div class="block-title">Parameters</div>
+                    <div class="param-row">
+                        <span class="param-label">m (total)</span>
+                        <el-input-number v-model="params.m" :min="3" :max="80" :step="1" class="param-input" controls-position="right"></el-input-number>
+                    </div>
+                    <div class="param-row">
+                        <span class="param-label">n (select)</span>
+                        <el-input-number v-model="params.n" :min="2" :max="params.m" :step="1" class="param-input" controls-position="right"></el-input-number>
+                    </div>
+                    <div class="param-row">
+                        <span class="param-label">k (group)</span>
+                        <el-input-number v-model="params.k" :min="2" :max="params.n" :step="1" class="param-input" controls-position="right"></el-input-number>
+                    </div>
+                    <div class="param-row">
+                        <span class="param-label">j (subset)</span>
+                        <el-input-number v-model="params.j" :min="2" :max="params.k" :step="1" class="param-input" controls-position="right"></el-input-number>
+                    </div>
+                    <div class="param-row">
+                        <span class="param-label">s (strength)</span>
+                        <el-input-number v-model="params.s" :min="1" :max="params.j" :step="1" class="param-input" controls-position="right"></el-input-number>
+                    </div>
+                    <div v-if="!isParamsValid" class="error-warning">⚠️ s ≤ j ≤ k ≤ n ≤ m</div>
+                </div>
+
+                <div class="param-block">
+                    <div class="block-title">Sample set (exactly {{ params.n }} items)</div>
+                    <div style="margin: 12px 0 6px;">
+                        <textarea v-model="manualRaw" rows="2" placeholder="e.g. 5,12,18,27,33,41" @input="parseManualInput"></textarea>
+                        <el-button size="small" style="margin-top: 8px; width:100%" @click="applyManualSamples" :disabled="parsedPreview.length === 0" plain>
+                            Use {{ parsedPreview.length }} samples
+                        </el-button>
+                    </div>
+                    <div v-if="selectedSamples.length > 0">
+                        <div class="param-label">Current</div>
+                        <div class="sample-tag-list">
+                            <el-tag v-for="s in selectedSamples" :key="s" closable @close="removeSampleItem(s)" size="small" effect="plain">
+                                {{ s }}
+                            </el-tag>
+                        </div>
+                        <el-button size="small" type="warning" plain style="margin-top: 12px;" @click="clearAllSamples">Clear</el-button>
+                    </div>
+                </div>
+
+                <div class="param-block">
+                    <el-button type="primary" size="large" @click="startCovering" :disabled="!canCalc" :loading="calculating" style="width:100%; border-radius: 60px;">
+                        {{ calculating ? 'Solving...' : 'Compute groups' }}
+                    </el-button>
+                    <div v-if="calculating" style="margin-top: 12px;">
+                        <el-progress :percentage="calcProgress" :stroke-width="5" :show-text="false"></el-progress>
+                        <div style="font-size:0.7rem; text-align:center; margin-top:6px; color:#5d7f9e;">{{ statusMsg }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- right panel: results -->
+            <div class="result-panel">
+                <div class="stat-row-mini" v-if="results.length > 0">
+                    <div class="stat-piece">
+                        <div class="stat-sm">Groups</div>
+                        <div class="stat-num">{{ results.length }}</div>
+                    </div>
+                    <div class="stat-piece">
+                        <div class="stat-sm">Coverage</div>
+                        <div class="stat-num">{{ coverageStats.satisfiedRate.toFixed(1) }}%</div>
+                        <div style="font-size:0.7rem;">{{ coverageStats.satisfied }}/{{ coverageStats.totalJSubCover }}</div>
+                    </div>
+                    <div class="stat-piece">
+                        <div class="stat-sm">Time (s)</div>
+                        <div class="stat-num">{{ execTime.toFixed(2) }}</div>
+                    </div>
+                </div>
+
+                <div v-if="results.length === 0 && !calculating" style="text-align: center; padding: 60px 20px; background: #fbfdfe; border-radius: 32px; border:1px solid #eef2f8;">
+                    <span style="font-size:2rem;">🧩</span>
+                    <p style="color:#6f8dab; margin-top: 12px;">Set parameters → input samples → compute</p>
+                </div>
+
+                <div v-if="results.length > 0">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px;">
+                        <h3 style="font-weight: 500; font-size: 1rem; color:#1a3a55;">Optimal groups (k={{ params.k }})</h3>
+                        <el-button size="small" text @click="exportResult">📄 Export</el-button>
+                    </div>
+                    <div class="groups-grid">
+                        <div v-for="(group, idx) in results" :key="idx" class="group-card-mini">
+                            <div class="group-name">Group {{ idx+1 }}</div>
+                            <div class="chip-group">
+                                <span v-for="val in group.samples" :key="val" class="chip-sample">{{ val }}</span>
+                            </div>
+                            <div class="cover-meta">covers all s‑subsets ✓</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="log-area-light" v-if="logs.length > 0">
+                    <div v-for="(lg, idx) in logs.slice(-12)" :key="idx" style="font-family: monospace; font-size:0.7rem; line-height:1.4;">
+                        <span style="color:#8da1b5;">[{{ lg.time }}]</span> {{ lg.text }}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-        const { createApp, ref, computed, onMounted } = Vue;
-        const { ElMessage, ElMessageBox } = ElementPlus;
-        
-        const App = {
-            setup() {
-                // 参数和样本
-                const params = ref({ m: 45, n: 8, k: 6, j: 4, s: 4, lambda: 1 });
-                const selectedSamples = ref([]);
-                const manualInputText = ref('');
-                const parsedSamples = ref([]);
-                const results = ref([]);
-                const calculating = ref(false);
-                const calcProgress = ref(0);
-                const statusText = ref('');
-                const coverageStats = ref({ satisfiedRate: 0, satisfied: 0, totalJ: 0 });
-                const executionTime = ref(0);
-                const algoLog = ref([]);
-                const currentRunCount = ref(0);
-                const lastSavedFile = ref('');
-                const currentDBFile = ref(''); // 标记当前显示的是否来自DB
-                
-                // DB文件列表
-                const dbFiles = ref([]);
-                const DB_STORAGE_KEY = 'optimal_samples_db_files';
-                
-                // 验证
-                const isParamsValid = computed(() => {
-                    const p = params.value;
-                    return p.s <= p.j && p.j <= p.k && p.k <= p.n && p.n <= p.m && p.lambda >= 1;
-                });
-                
-                const canCalculate = computed(() => {
-                    return isParamsValid.value && 
-                           selectedSamples.value.length === params.value.n && 
-                           !calculating.value;
-                });
-                
-                // 日志
-                const log = (msg, color) => {
-                    const time = new Date().toLocaleTimeString();
-                    algoLog.value.push({ time, message: msg, color });
-                    if (algoLog.value.length > 50) algoLog.value.shift();
-                };
-                
-                // 解析手动输入
-                const parseManualInput = () => {
-                    const text = manualInputText.value;
-                    const nums = text.split(/[,\s\n]+/)
-                        .map(s => parseInt(s.trim()))
-                        .filter(n => !isNaN(n) && n >= 1 && n <= params.value.m);
-                    const unique = [...new Set(nums)].sort((a, b) => a - b);
-                    parsedSamples.value = unique;
-                };
-                
-                const confirmManualInput = () => {
-                    if (parsedSamples.value.length === 0) {
-                        ElMessage.warning('请输入有效的样本编号');
-                        return;
+    <div v-if="calculating" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.9); backdrop-filter: blur(1px); display:flex; align-items:center; justify-content:center; z-index:1000;">
+        <div style="background: white; padding: 24px 32px; border-radius: 48px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); text-align: center;">
+            <div style="width:36px; height:36px; border:3px solid #e0e8f0; border-top-color:#427c9e; border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto 16px;"></div>
+            <div style="color:#2b5a7a;">{{ statusMsg }}</div>
+        </div>
+    </div>
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted } = Vue;
+    const { ElMessage } = ElementPlus;
+
+    createApp({
+        setup() {
+            const params = ref({ m: 45, n: 8, k: 6, j: 4, s: 2 });
+            const selectedSamples = ref([]);
+            const manualRaw = ref('');
+            const parsedPreview = ref([]);
+            
+            const results = ref([]);
+            const calculating = ref(false);
+            const calcProgress = ref(0);
+            const statusMsg = ref('');
+            const coverageStats = ref({ satisfiedRate: 0, satisfied: 0, totalJSubCover: 0 });
+            const execTime = ref(0);
+            const logs = ref([]);
+            
+            const isParamsValid = computed(() => {
+                const p = params.value;
+                return p.s <= p.j && p.j <= p.k && p.k <= p.n && p.n <= p.m;
+            });
+            
+            const canCalc = computed(() => {
+                return isParamsValid.value && selectedSamples.value.length === params.value.n && !calculating.value;
+            });
+            
+            const addLog = (msg) => {
+                const time = new Date().toLocaleTimeString();
+                logs.value.push({ time, text: msg });
+                if (logs.value.length > 45) logs.value.shift();
+            };
+            
+            // combinatorial helper
+            const combine = (arr, size) => {
+                const result = [];
+                const n = arr.length;
+                if (size > n || size <= 0) return result;
+                const indices = Array.from({ length: size }, (_, i) => i);
+                while (true) {
+                    result.push(indices.map(i => arr[i]));
+                    let i = size - 1;
+                    while (i >= 0 && indices[i] === n - size + i) i--;
+                    if (i < 0) break;
+                    indices[i]++;
+                    for (let j = i + 1; j < size; j++) indices[j] = indices[j-1] + 1;
+                }
+                return result;
+            };
+            
+            // core algorithm: strength-s covering
+            const computeCovering = (samples, k, j, s) => {
+                const startPerf = performance.now();
+                const n = samples.length;
+                // combinatorial guard
+                const maxGroups = (function binom(nn, kk) {
+                    if (kk > nn) return 0;
+                    let res = 1;
+                    for (let i = 1; i <= kk; i++) {
+                        res = res * (nn - kk + i) / i;
+                        if (res > 180000) return 1e9;
                     }
-                    if (parsedSamples.value.length < params.value.k) {
-                        ElMessage.error(`样本数(${parsedSamples.value.length})不能小于k(${params.value.k})`);
-                        return;
+                    return res;
+                })(n, k);
+                if (maxGroups > 180000) {
+                    throw new Error(`Too many k-groups (C(${n},${k}) ~ ${Math.round(maxGroups)}). Reduce n or k.`);
+                }
+                
+                const allJ = combine(samples, j);
+                if (allJ.length === 0) throw new Error("No j-subsets");
+                // build demands: each (j-subset, its s-subset)
+                const demands = []; // { jIdx, sSub }
+                const sSubToDemandIds = new Map(); // key: sSub string -> demand indices
+                for (let jIdx = 0; jIdx < allJ.length; jIdx++) {
+                    const jSub = allJ[jIdx];
+                    const sSubs = combine(jSub, s);
+                    for (const sSub of sSubs) {
+                        const did = demands.length;
+                        demands.push({ jIdx, sSub });
+                        const key = sSub.join(',');
+                        if (!sSubToDemandIds.has(key)) sSubToDemandIds.set(key, []);
+                        sSubToDemandIds.get(key).push(did);
                     }
-                    selectedSamples.value = [...parsedSamples.value];
-                    params.value.n = selectedSamples.value.length;
-                    manualInputText.value = '';
-                    parsedSamples.value = [];
-                    ElMessage.success(`已设置 ${params.value.n} 个样本`);
-                };
+                }
+                const totalDemands = demands.length;
+                if (totalDemands === 0) throw new Error("No demands (s may be invalid)");
+                addLog(`Demands: ${totalDemands}`);
                 
-                const randomSelect = () => {
-                    const arr = Array.from({length: params.value.m}, (_, i) => i + 1);
-                    for (let i = arr.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [arr[i], arr[j]] = [arr[j], arr[i]];
+                const allKGroups = combine(samples, k);
+                addLog(`Candidate groups: ${allKGroups.length}`);
+                if (allKGroups.length === 0) throw new Error("No k-groups available");
+                
+                // Precompute coverage for each k-group
+                const groupCoverage = [];
+                for (let gIdx = 0; gIdx < allKGroups.length; gIdx++) {
+                    const group = allKGroups[gIdx];
+                    const groupSSubs = combine(group, s);
+                    const coveredSet = new Set();
+                    for (const sSub of groupSSubs) {
+                        const key = sSub.join(',');
+                        const demandIds = sSubToDemandIds.get(key);
+                        if (demandIds) {
+                            for (const did of demandIds) coveredSet.add(did);
+                        }
                     }
-                    selectedSamples.value = arr.slice(0, params.value.n).sort((a, b) => a - b);
-                    log(`随机选择: [${selectedSamples.value.join(', ')}]`);
-                    ElMessage.success(`已随机选择 ${params.value.n} 个样本`);
-                };
-                
-                const removeSample = (s) => {
-                    selectedSamples.value = selectedSamples.value.filter(x => x !== s);
-                    params.value.n = selectedSamples.value.length;
-                };
-                
-                const clearSamples = () => {
-                    selectedSamples.value = [];
-                    params.value.n = 0;
-                };
-                
-                // 组合数学函数
-                const generateCombinations = (arr, k) => {
-                    const result = [];
-                    const n = arr.length;
-                    if (k > n || k <= 0) return result;
-                    const indices = Array(k).fill(0).map((_, i) => i);
-                    while (true) {
-                        result.push(indices.map(i => arr[i]));
-                        let i = k - 1;
-                        while (i >= 0 && indices[i] === n - k + i) i--;
-                        if (i < 0) break;
-                        indices[i]++;
-                        for (let j = i + 1; j < k; j++) indices[j] = indices[j-1] + 1;
-                    }
-                    return result;
-                };
-                
-                const isSubset = (small, large) => {
-                    const set = new Set(large);
-                    return small.every(x => set.has(x));
-                };
-                
-                // 核心算法
-                const generalCoveringDesign = (samples, k, j, s, lambda) => {
-                    const startTime = performance.now();
-                    const n = samples.length;
-                    log(`开始计算: C(${n},${k})选组, 覆盖C(${n},${j}), λ=${lambda}`);
-                    
-                    const allKGroups = generateCombinations(samples, k);
-                    const allJSubsets = generateCombinations(samples, j);
-                    const totalJ = allJSubsets.length;
-                    
-                    const jSubsetSSubsets = allJSubsets.map(jSub => 
-                        generateCombinations(jSub, s).map(arr => arr.join(','))
-                    );
-                    
-                    log(`空间: ${allKGroups.length}个k-组, ${totalJ}个j-子集`);
-                    
-                    const groupStructs = allKGroups.map((group, idx) => {
-                        const covers = Array(totalJ).fill(null).map(() => new Set());
-                        const groupSSubs = generateCombinations(group, s);
-                        groupSSubs.forEach(sSub => {
-                            const sKey = sSub.join(',');
-                            allJSubsets.forEach((jSub, jIdx) => {
-                                if (isSubset(sSub, jSub)) {
-                                    const sIdx = jSubsetSSubsets[jIdx].indexOf(sKey);
-                                    if (sIdx !== -1) covers[jIdx].add(sIdx);
-                                }
-                            });
+                    if (coveredSet.size > 0) {
+                        groupCoverage.push({
+                            idx: gIdx,
+                            group: group,
+                            covers: coveredSet,
+                            coverArray: Array.from(coveredSet)
                         });
-                        return { idx, group, covers };
-                    }).filter(g => g.covers.some(set => set.size > 0));
-                    
-                    // 多起点贪心
-                    let bestSolution = null;
+                    }
+                }
+                if (groupCoverage.length === 0) throw new Error("No group covers any demand");
+                addLog(`Valid groups: ${groupCoverage.length}`);
+                
+                // Greedy set cover with multi-start + redundancy removal
+                const bestSolution = (function greedyMultiStart() {
+                    let bestIndices = null;
                     let bestSize = Infinity;
+                    const numStarts = Math.min(8, Math.max(3, Math.floor(groupCoverage.length / 400) + 2));
                     
-                    for (let start = 0; start < 10; start++) {
-                        let candidates = [...groupStructs].sort(() => Math.random() - 0.5);
+                    for (let start = 0; start < numStarts; start++) {
+                        let candidates = [...groupCoverage];
+                        for (let i = candidates.length - 1; i > 0; i--) {
+                            const r = Math.floor(Math.random() * (i + 1));
+                            [candidates[i], candidates[r]] = [candidates[r], candidates[i]];
+                        }
                         let selected = [];
-                        let coverState = Array(totalJ).fill(null).map(() => new Set());
+                        let covered = new Array(totalDemands).fill(false);
+                        let remain = totalDemands;
                         
-                        let iter = 0;
-                        while (iter < 1000) {
-                            iter++;
-                            let maxDeficit = 0;
-                            let targetJ = -1;
-                            for (let i = 0; i < totalJ; i++) {
-                                const deficit = lambda - coverState[i].size;
-                                if (deficit > maxDeficit) {
-                                    maxDeficit = deficit;
-                                    targetJ = i;
-                                }
-                            }
-                            if (maxDeficit === 0) break;
-                            
-                            let bestGroup = null;
-                            let bestScore = -Infinity;
-                            
-                            for (const g of candidates) {
-                                if (selected.includes(g.idx)) continue;
-                                let contribution = 0;
-                                for (let ji = 0; ji < totalJ; ji++) {
-                                    const needed = lambda - coverState[ji].size;
-                                    if (needed <= 0) continue;
-                                    let newCov = 0;
-                                    for (const sIdx of g.covers[ji]) {
-                                        if (!coverState[ji].has(sIdx)) newCov++;
-                                    }
-                                    contribution += Math.min(newCov, needed);
-                                }
-                                if (contribution <= 0) continue;
-                                if (g.covers[targetJ].size > 0) contribution += 0.5;
-                                
-                                if (contribution > bestScore) {
-                                    bestScore = contribution;
-                                    bestGroup = g;
-                                }
-                            }
-                            
-                            if (!bestGroup) break;
-                            
-                            selected.push(bestGroup.idx);
-                            for (let i = 0; i < totalJ; i++) {
-                                for (const sIdx of bestGroup.covers[i]) coverState[i].add(sIdx);
-                            }
-                        }
-                        
-                        // 修复
-                        for (let repair = 0; repair < 200; repair++) {
-                            let violated = [];
-                            for (let i = 0; i < totalJ; i++) {
-                                if (coverState[i].size < lambda) violated.push(i);
-                            }
-                            if (violated.length === 0) break;
-                            
-                            for (const vIdx of violated.slice(0, 5)) {
-                                let bestRepair = null;
-                                let bestNewCov = 0;
-                                for (const g of groupStructs) {
-                                    if (selected.includes(g.idx)) continue;
-                                    let newCov = 0;
-                                    for (const sIdx of g.covers[vIdx]) {
-                                        if (!coverState[vIdx].has(sIdx)) newCov++;
-                                    }
-                                    if (newCov > bestNewCov) {
-                                        bestNewCov = newCov;
-                                        bestRepair = g;
-                                    }
-                                }
-                                if (bestRepair) {
-                                    selected.push(bestRepair.idx);
-                                    for (let i = 0; i < totalJ; i++) {
-                                        for (const sIdx of bestRepair.covers[i]) coverState[i].add(sIdx);
-                                    }
+                        // greedy
+                        for (const cand of candidates) {
+                            if (remain === 0) break;
+                            let newCover = 0;
+                            for (const d of cand.coverArray) if (!covered[d]) newCover++;
+                            if (newCover > 0) {
+                                selected.push(cand);
+                                for (const d of cand.coverArray) {
+                                    if (!covered[d]) { covered[d] = true; remain--; }
                                 }
                             }
                         }
                         
-                        // 优化
-                        let improved = true;
-                        while (improved) {
-                            improved = false;
+                        // repair uncovered
+                        if (remain > 0) {
+                            let remainingCandidates = groupCoverage.filter(g => !selected.includes(g));
+                            let iter = 0;
+                            while (remain > 0 && iter++ < 400) {
+                                let bestCand = null;
+                                let bestGain = 0;
+                                for (const cand of remainingCandidates) {
+                                    let gain = 0;
+                                    for (const d of cand.coverArray) if (!covered[d]) gain++;
+                                    if (gain > bestGain) { bestGain = gain; bestCand = cand; }
+                                }
+                                if (!bestCand || bestGain === 0) break;
+                                selected.push(bestCand);
+                                for (const d of bestCand.coverArray) {
+                                    if (!covered[d]) { covered[d] = true; remain--; }
+                                }
+                                remainingCandidates = remainingCandidates.filter(c => c !== bestCand);
+                            }
+                        }
+                        
+                        // final forced cover for any missing demand
+                        if (remain > 0) {
+                            const missing = [];
+                            for (let i = 0; i < totalDemands; i++) if (!covered[i]) missing.push(i);
+                            for (const miss of missing.slice(0, 200)) {
+                                for (const cand of groupCoverage) {
+                                    if (cand.covers.has(miss) && !selected.includes(cand)) {
+                                        selected.push(cand);
+                                        for (const d of cand.coverArray) covered[d] = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            let finalRemain = 0;
+                            for (let i = 0; i < totalDemands; i++) if (!covered[i]) finalRemain++;
+                            if (finalRemain > 0) continue;
+                        }
+                        
+                        // redundancy removal
+                        let changed = true;
+                        for (let opt = 0; opt < 4 && changed; opt++) {
+                            changed = false;
                             for (let i = selected.length - 1; i >= 0; i--) {
-                                const test = selected.filter((_, idx) => idx !== i);
-                                if (verifySolution(test, groupStructs, totalJ, lambda)) {
-                                    selected = test;
-                                    improved = true;
+                                const testSel = selected.filter((_, idx) => idx !== i);
+                                let testCover = new Array(totalDemands).fill(false);
+                                for (const g of testSel) {
+                                    for (const d of g.coverArray) testCover[d] = true;
                                 }
-                            }
-                        }
-                        
-                        // 2换1
-                        improved = true;
-                        while (improved) {
-                            improved = false;
-                            outer:
-                            for (let i = 0; i < selected.length - 1; i++) {
-                                for (let j = i + 1; j < selected.length; j++) {
-                                    const rest = selected.filter((_, idx) => idx !== i && idx !== j);
-                                    for (const cand of groupStructs) {
-                                        if (selected.includes(cand.idx)) continue;
-                                        const test = [...rest, cand.idx];
-                                        if (verifySolution(test, groupStructs, totalJ, lambda)) {
-                                            selected = test;
-                                            improved = true;
-                                            break outer;
-                                        }
-                                    }
+                                if (testCover.every(v => v === true)) {
+                                    selected = testSel;
+                                    changed = true;
                                 }
                             }
                         }
                         
                         if (selected.length < bestSize) {
                             bestSize = selected.length;
-                            bestSolution = [...selected];
+                            bestIndices = selected.map(g => g.idx);
                         }
                     }
-                    
-                    if (!bestSolution) throw new Error("未找到可行解");
-                    
-                    const resultGroups = bestSolution.map((idx, i) => {
-                        const g = groupStructs.find(x => x.idx === idx);
-                        let coveredCount = 0;
-                        for (let ji = 0; ji < totalJ; ji++) {
-                            if (g.covers[ji].size > 0) coveredCount++;
-                        }
-                        return { id: i + 1, samples: g.group, coveredJSubsetCount: coveredCount };
-                    });
-                    
-                    const finalCover = Array(totalJ).fill(null).map(() => new Set());
-                    for (const idx of bestSolution) {
-                        const g = groupStructs.find(x => x.idx === idx);
-                        for (let i = 0; i < totalJ; i++) {
-                            for (const sIdx of g.covers[i]) finalCover[i].add(sIdx);
-                        }
-                    }
-                    
-                    let satisfied = 0;
-                    for (let i = 0; i < totalJ; i++) {
-                        if (finalCover[i].size >= lambda) satisfied++;
-                    }
-                    
-                    executionTime.value = (performance.now() - startTime) / 1000;
-                    
-                    coverageStats.value = {
-                        satisfiedRate: (satisfied / totalJ) * 100,
-                        satisfied,
-                        totalJ
-                    };
-                    
-                    return resultGroups;
-                };
+                    if (!bestIndices) throw new Error("No feasible covering solution. Try larger n/k.");
+                    return bestIndices;
+                })();
                 
-                const verifySolution = (selectedIndices, groupStructs, totalJ, lambda) => {
-                    const cover = Array(totalJ).fill(null).map(() => new Set());
-                    for (const idx of selectedIndices) {
-                        const g = groupStructs.find(x => x.idx === idx);
-                        if (!g) return false;
-                        for (let i = 0; i < totalJ; i++) {
-                            for (const sIdx of g.covers[i]) cover[i].add(sIdx);
-                        }
-                    }
-                    return cover.every(c => c.size >= lambda);
-                };
-                
-                // 计算覆盖数（用于DB加载后的显示）
-                const calculateCoveredCount = (groupSamples) => {
-                    // 简化计算，仅用于显示
-                    return params.value.j; 
-                };
-                
-                // 计算
-                const startCalculate = async () => {
-                    if (!canCalculate.value) return;
-                    
-                    calculating.value = true;
-                    algoLog.value = [];
-                    currentDBFile.value = ''; // 清除DB标记，表示是新计算
-                    
-                    try {
-                        const res = await new Promise((resolve, reject) => {
-                            setTimeout(() => {
-                                try {
-                                    const result = generalCoveringDesign(
-                                        selectedSamples.value,
-                                        params.value.k,
-                                        params.value.j,
-                                        params.value.s,
-                                        params.value.lambda
-                                    );
-                                    resolve(result);
-                                } catch (e) {
-                                    reject(e);
-                                }
-                            }, 100);
-                        });
-                        
-                        results.value = res;
-                        currentRunCount.value++;
-                        ElMessage.success(`计算完成: ${res.length} 组`);
-                        
-                    } catch (error) {
-                        ElMessage.error('计算错误: ' + error.message);
-                    } finally {
-                        calculating.value = false;
-                    }
-                };
-                
-                // DB功能
-                const generateDBFilename = () => {
-                    const p = params.value;
-                    const x = currentRunCount.value;
-                    const y = results.value.length;
-                    return `${p.m}-${p.n}-${p.k}-${p.j}-${p.s}-${p.lambda}-${x}-${y}`;
-                };
-                
-                const saveToDB = () => {
-                    if (results.value.length === 0) {
-                        ElMessage.warning('没有可保存的结果');
-                        return;
-                    }
-                    
-                    const filename = generateDBFilename();
-                    const dbRecord = {
-                        id: Date.now(),
-                        filename: filename,
-                        timestamp: new Date().toLocaleString(),
-                        params: { ...params.value },
-                        samples: [...selectedSamples.value],
-                        results: JSON.parse(JSON.stringify(results.value)),
-                        coverageStats: { ...coverageStats.value },
-                        resultCount: results.value.length
-                    };
-                    
-                    dbFiles.value.unshift(dbRecord);
-                    saveDBToStorage();
-                    lastSavedFile.value = filename;
-                    ElMessage.success(`已保存到DB: ${filename}`);
-                };
-                
-                const executeDB = (file) => {
-                    // 加载DB文件到屏幕
-                    params.value = { ...file.params };
-                    selectedSamples.value = [...file.samples];
-                    results.value = JSON.parse(JSON.stringify(file.results));
-                    coverageStats.value = { ...file.coverageStats };
-                    currentDBFile.value = file.filename;
-                    currentRunCount.value = parseInt(file.filename.split('-')[6]) || 0;
-                    ElMessage.success(`已加载DB文件: ${file.filename}`);
-                };
-                
-                const deleteDB = (id) => {
-                    ElMessageBox.confirm('确定要删除这个DB文件吗？', '确认删除', {
-                        confirmButtonText: '删除',
-                        cancelButtonText: '取消',
-                        type: 'warning'
-                    }).then(() => {
-                        dbFiles.value = dbFiles.value.filter(f => f.id !== id);
-                        saveDBToStorage();
-                        ElMessage.success('已删除');
-                    }).catch(() => {});
-                };
-                
-                const saveDBToStorage = () => {
-                    localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(dbFiles.value));
-                };
-                
-                const loadDBFromStorage = () => {
-                    const saved = localStorage.getItem(DB_STORAGE_KEY);
-                    if (saved) {
-                        try {
-                            dbFiles.value = JSON.parse(saved);
-                        } catch (e) {
-                            console.error('加载DB失败', e);
-                        }
-                    }
-                };
-                
-                // 导出
-                const exportResult = () => {
-                    let text = `Optimal Samples Selection Result\n`;
-                    text += `File: ${currentDBFile.value || 'New Calculation'}\n`;
-                    text += `Parameters: m=${params.value.m}, n=${params.value.n}, k=${params.value.k}, j=${params.value.j}, s=${params.value.s}, lambda=${params.value.lambda}\n`;
-                    text += `Samples: [${selectedSamples.value.join(', ')}]\n`;
-                    text += `Groups: ${results.value.length}\n`;
-                    text += `Coverage: ${coverageStats.value.satisfiedRate.toFixed(2)}%\n\n`;
-                    
-                    results.value.forEach((g, i) => {
-                        text += `Group ${i+1}: {${g.samples.join(', ')}}\n`;
-                    });
-                    
-                    const blob = new Blob([text], {type: 'text/plain'});
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${generateDBFilename()}.txt`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                };
-                
-                onMounted(() => {
-                    loadDBFromStorage();
+                const finalGroups = bestSolution.map(idx => {
+                    const g = groupCoverage.find(c => c.idx === idx);
+                    return { samples: g.group };
                 });
                 
-                return {
-                    params,
-                    selectedSamples,
-                    manualInputText,
-                    parsedSamples,
-                    results,
-                    calculating,
-                    calcProgress,
-                    statusText,
-                    coverageStats,
-                    executionTime,
-                    algoLog,
-                    currentRunCount,
-                    lastSavedFile,
-                    currentDBFile,
-                    dbFiles,
-                    isParamsValid,
-                    canCalculate,
-                    parseManualInput,
-                    confirmManualInput,
-                    randomSelect,
-                    removeSample,
-                    clearSamples,
-                    startCalculate,
-                    saveToDB,
-                    executeDB,
-                    deleteDB,
-                    exportResult,
-                    calculateCoveredCount
+                // compute j-subset satisfaction rate
+                const allJSubsets = allJ;
+                const coveredDemandFinal = new Array(totalDemands).fill(false);
+                for (const idx of bestSolution) {
+                    const g = groupCoverage.find(c => c.idx === idx);
+                    for (const d of g.coverArray) coveredDemandFinal[d] = true;
+                }
+                const demandsByJIdx = Array.from({ length: allJSubsets.length }, () => []);
+                for (let did = 0; did < demands.length; did++) {
+                    demandsByJIdx[demands[did].jIdx].push(did);
+                }
+                let satisfiedCount = 0;
+                for (let jIdx = 0; jIdx < allJSubsets.length; jIdx++) {
+                    let ok = true;
+                    for (const did of demandsByJIdx[jIdx]) {
+                        if (!coveredDemandFinal[did]) { ok = false; break; }
+                    }
+                    if (ok) satisfiedCount++;
+                }
+                const rate = (satisfiedCount / allJSubsets.length) * 100;
+                coverageStats.value = {
+                    satisfiedRate: rate,
+                    satisfied: satisfiedCount,
+                    totalJSubCover: allJSubsets.length
                 };
-            }
-        };
-        
-        createApp(App).use(ElementPlus).mount('#app');
-    </script>
+                execTime.value = (performance.now() - startPerf) / 1000;
+                addLog(`Solution: ${finalGroups.length} groups, j-coverage ${rate.toFixed(1)}% (${satisfiedCount}/${allJSubsets.length}) in ${execTime.value.toFixed(2)}s`);
+                return finalGroups;
+            };
+            
+            // manual sample handling
+            const parseManualInput = () => {
+                const txt = manualRaw.value;
+                const nums = txt.split(/[,\s\n]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1 && n <= params.value.m);
+                const uniq = [...new Set(nums)].sort((a, b) => a - b);
+                parsedPreview.value = uniq;
+            };
+            
+            const applyManualSamples = () => {
+                if (parsedPreview.value.length === 0) { ElMessage.warning('No valid numbers'); return; }
+                if (parsedPreview.value.length !== params.value.n) {
+                    ElMessage.warning(`Need exactly ${params.value.n} samples (${parsedPreview.value.length} provided)`);
+                    return;
+                }
+                selectedSamples.value = [...parsedPreview.value];
+                manualRaw.value = '';
+                parsedPreview.value = [];
+                addLog(`Samples: ${selectedSamples.value.join(', ')}`);
+                ElMessage.success(`Applied ${selectedSamples.value.length} samples`);
+            };
+            
+            const removeSampleItem = (s) => {
+                selectedSamples.value = selectedSamples.value.filter(x => x !== s);
+                params.value.n = selectedSamples.value.length;
+            };
+            
+            const clearAllSamples = () => {
+                selectedSamples.value = [];
+                params.value.n = 0;
+            };
+            
+            const startCovering = async () => {
+                if (!canCalc.value) {
+                    ElMessage.error('Invalid parameters or sample count mismatch');
+                    return;
+                }
+                calculating.value = true;
+                calcProgress.value = 0;
+                statusMsg.value = 'Solving set cover ...';
+                results.value = [];
+                try {
+                    const solution = await new Promise((resolve, reject) => {
+                        setTimeout(() => {
+                            try {
+                                const res = computeCovering(
+                                    selectedSamples.value,
+                                    params.value.k,
+                                    params.value.j,
+                                    params.value.s
+                                );
+                                resolve(res);
+                            } catch (err) { reject(err); }
+                        }, 20);
+                    });
+                    results.value = solution;
+                    ElMessage.success(`Done: ${solution.length} groups`);
+                    calcProgress.value = 100;
+                } catch (err) {
+                    ElMessage.error('Error: ' + err.message);
+                    addLog(`ERROR: ${err.message}`);
+                } finally {
+                    calculating.value = false;
+                    statusMsg.value = '';
+                }
+            };
+            
+            const exportResult = () => {
+                if (results.value.length === 0) return;
+                let content = `Covering strength s=${params.value.s}\n`;
+                content += `m=${params.value.m}, n=${params.value.n}, k=${params.value.k}, j=${params.value.j}, s=${params.value.s}\n`;
+                content += `Samples: ${selectedSamples.value.join(', ')}\n`;
+                content += `Coverage: ${coverageStats.value.satisfiedRate.toFixed(1)}% (${coverageStats.value.satisfied}/${coverageStats.value.totalJSubCover})\n`;
+                content += `Groups: ${results.value.length}\n\n`;
+                results.value.forEach((g, idx) => {
+                    content += `Group ${idx+1}: {${g.samples.join(', ')}}\n`;
+                });
+                const blob = new Blob([content], {type: 'text/plain'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `covering_s${params.value.s}_${Date.now()}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+                ElMessage.success('Export complete');
+            };
+            
+            // no auto random samples
+            onMounted(() => {
+                // intentionally empty: user must input samples manually
+            });
+            
+            return {
+                params,
+                selectedSamples,
+                manualRaw,
+                parsedPreview,
+                results,
+                calculating,
+                calcProgress,
+                statusMsg,
+                coverageStats,
+                execTime,
+                logs,
+                isParamsValid,
+                canCalc,
+                parseManualInput,
+                applyManualSamples,
+                removeSampleItem,
+                clearAllSamples,
+                startCovering,
+                exportResult
+            };
+        }
+    }).use(ElementPlus).mount('#app');
+</script>
 </body>
 </html>
