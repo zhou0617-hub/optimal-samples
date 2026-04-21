@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Covering · Strength s</title>
+    <title>Covering · strength s (light)</title>
     <!-- Vue 3 & Element Plus -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
@@ -104,31 +104,6 @@
             flex-direction: column;
             gap: 12px;
             margin: 16px 0 8px;
-        }
-        .stat-row-mini {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            margin-bottom: 28px;
-        }
-        .stat-piece {
-            background: #f8fbfe;
-            border-radius: 24px;
-            padding: 12px 18px;
-            flex: 1;
-            min-width: 110px;
-            border: 1px solid #eef2f8;
-        }
-        .stat-piece .stat-sm {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            color: #6b86a2;
-        }
-        .stat-piece .stat-num {
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: #1e3a5f;
-            line-height: 1.2;
         }
         .groups-grid {
             display: grid;
@@ -271,22 +246,6 @@
 
             <!-- right panel: results -->
             <div class="result-panel">
-                <div class="stat-row-mini" v-if="results.length > 0">
-                    <div class="stat-piece">
-                        <div class="stat-sm">Groups</div>
-                        <div class="stat-num">{{ results.length }}</div>
-                    </div>
-                    <div class="stat-piece">
-                        <div class="stat-sm">Coverage</div>
-                        <div class="stat-num">{{ coverageStats.satisfiedRate.toFixed(1) }}%</div>
-                        <div style="font-size:0.7rem;">{{ coverageStats.satisfied }}/{{ coverageStats.totalJSubCover }}</div>
-                    </div>
-                    <div class="stat-piece">
-                        <div class="stat-sm">Time (s)</div>
-                        <div class="stat-num">{{ execTime.toFixed(2) }}</div>
-                    </div>
-                </div>
-
                 <div v-if="results.length === 0 && !calculating" style="text-align: center; padding: 60px 20px; background: #fbfdfe; border-radius: 32px; border:1px solid #eef2f8;">
                     <span style="font-size:2rem;">🧩</span>
                     <p style="color:#6f8dab; margin-top: 12px;">Set parameters → input samples → compute</p>
@@ -294,7 +253,7 @@
 
                 <div v-if="results.length > 0">
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px;">
-                        <h3 style="font-weight: 500; font-size: 1rem; color:#1a3a55;">Optimal groups (k={{ params.k }})</h3>
+                        <h3 style="font-weight: 500; font-size: 1rem; color:#1a3a55;">Groups (k={{ params.k }})</h3>
                         <el-button size="small" text @click="exportResult">📄 Export</el-button>
                     </div>
                     <div class="groups-grid">
@@ -329,7 +288,7 @@
 </div>
 
 <script>
-    const { createApp, ref, computed, onMounted } = Vue;
+    const { createApp, ref, computed } = Vue;
     const { ElMessage } = ElementPlus;
 
     createApp({
@@ -343,8 +302,6 @@
             const calculating = ref(false);
             const calcProgress = ref(0);
             const statusMsg = ref('');
-            const coverageStats = ref({ satisfiedRate: 0, satisfied: 0, totalJSubCover: 0 });
-            const execTime = ref(0);
             const logs = ref([]);
             
             const isParamsValid = computed(() => {
@@ -379,29 +336,31 @@
                 return result;
             };
             
-            // core algorithm: strength-s covering
-            const computeCovering = (samples, k, j, s) => {
-                const startPerf = performance.now();
+            // simplified greedy covering (single random shuffle + redundancy removal)
+            // no multi-start, no heavy statistics, returns groups that cover all demands (or throws)
+            const computeCoveringSimple = (samples, k, j, s) => {
                 const n = samples.length;
-                // combinatorial guard
-                const maxGroups = (function binom(nn, kk) {
+                // check combinatorial explosion (soft limit)
+                const approxGroups = (function approxBinom(nn, kk) {
                     if (kk > nn) return 0;
                     let res = 1;
                     for (let i = 1; i <= kk; i++) {
                         res = res * (nn - kk + i) / i;
-                        if (res > 180000) return 1e9;
+                        if (res > 120000) return 1e9;
                     }
                     return res;
                 })(n, k);
-                if (maxGroups > 180000) {
-                    throw new Error(`Too many k-groups (C(${n},${k}) ~ ${Math.round(maxGroups)}). Reduce n or k.`);
+                if (approxGroups > 150000) {
+                    throw new Error(`Too many k‑groups (C(${n},${k}) ~ large). Reduce n or k.`);
                 }
                 
+                // all j-subsets and demands: (j-subset, its s-subset)
                 const allJ = combine(samples, j);
-                if (allJ.length === 0) throw new Error("No j-subsets");
-                // build demands: each (j-subset, its s-subset)
-                const demands = []; // { jIdx, sSub }
-                const sSubToDemandIds = new Map(); // key: sSub string -> demand indices
+                if (allJ.length === 0) throw new Error("No j‑subsets");
+                
+                // demand list: each entry = { jIdx, sSubArray }
+                const demands = [];
+                const sSubToDemandIds = new Map(); // string -> array of demand indices
                 for (let jIdx = 0; jIdx < allJ.length; jIdx++) {
                     const jSub = allJ[jIdx];
                     const sSubs = combine(jSub, s);
@@ -414,14 +373,15 @@
                     }
                 }
                 const totalDemands = demands.length;
-                if (totalDemands === 0) throw new Error("No demands (s may be invalid)");
+                if (totalDemands === 0) throw new Error("No demands (s too large?)");
                 addLog(`Demands: ${totalDemands}`);
                 
+                // all k-groups
                 const allKGroups = combine(samples, k);
                 addLog(`Candidate groups: ${allKGroups.length}`);
-                if (allKGroups.length === 0) throw new Error("No k-groups available");
+                if (allKGroups.length === 0) throw new Error("No k‑groups available");
                 
-                // Precompute coverage for each k-group
+                // precompute coverage for each k-group
                 const groupCoverage = [];
                 for (let gIdx = 0; gIdx < allKGroups.length; gIdx++) {
                     const group = allKGroups[gIdx];
@@ -443,136 +403,95 @@
                         });
                     }
                 }
-                if (groupCoverage.length === 0) throw new Error("No group covers any demand");
+                if (groupCoverage.length === 0) throw new Error("No group can cover any demand");
                 addLog(`Valid groups: ${groupCoverage.length}`);
                 
-                // Greedy set cover with multi-start + redundancy removal
-                const bestSolution = (function greedyMultiStart() {
-                    let bestIndices = null;
-                    let bestSize = Infinity;
-                    const numStarts = Math.min(8, Math.max(3, Math.floor(groupCoverage.length / 400) + 2));
-                    
-                    for (let start = 0; start < numStarts; start++) {
-                        let candidates = [...groupCoverage];
-                        for (let i = candidates.length - 1; i > 0; i--) {
-                            const r = Math.floor(Math.random() * (i + 1));
-                            [candidates[i], candidates[r]] = [candidates[r], candidates[i]];
+                // ----- simple greedy with random shuffle (single pass) -----
+                // shuffle candidates
+                const candidates = [...groupCoverage];
+                for (let i = candidates.length - 1; i > 0; i--) {
+                    const r = Math.floor(Math.random() * (i + 1));
+                    [candidates[i], candidates[r]] = [candidates[r], candidates[i]];
+                }
+                
+                let selected = [];
+                let covered = new Array(totalDemands).fill(false);
+                let remain = totalDemands;
+                
+                // greedy pick
+                for (const cand of candidates) {
+                    if (remain === 0) break;
+                    let newCover = 0;
+                    for (const d of cand.coverArray) if (!covered[d]) newCover++;
+                    if (newCover > 0) {
+                        selected.push(cand);
+                        for (const d of cand.coverArray) {
+                            if (!covered[d]) { covered[d] = true; remain--; }
                         }
-                        let selected = [];
-                        let covered = new Array(totalDemands).fill(false);
-                        let remain = totalDemands;
-                        
-                        // greedy
-                        for (const cand of candidates) {
-                            if (remain === 0) break;
-                            let newCover = 0;
-                            for (const d of cand.coverArray) if (!covered[d]) newCover++;
-                            if (newCover > 0) {
+                    }
+                }
+                
+                // if some demands remain, brute force add groups that cover them
+                if (remain > 0) {
+                    let remainingCandidates = groupCoverage.filter(g => !selected.includes(g));
+                    let attempts = 0;
+                    while (remain > 0 && attempts++ < 400 && remainingCandidates.length > 0) {
+                        let bestCand = null;
+                        let bestGain = 0;
+                        for (const cand of remainingCandidates) {
+                            let gain = 0;
+                            for (const d of cand.coverArray) if (!covered[d]) gain++;
+                            if (gain > bestGain) { bestGain = gain; bestCand = cand; }
+                        }
+                        if (!bestCand || bestGain === 0) break;
+                        selected.push(bestCand);
+                        for (const d of bestCand.coverArray) {
+                            if (!covered[d]) { covered[d] = true; remain--; }
+                        }
+                        remainingCandidates = remainingCandidates.filter(c => c !== bestCand);
+                    }
+                }
+                
+                // final emergency: try any group covering each missing demand individually
+                if (remain > 0) {
+                    const missing = [];
+                    for (let i = 0; i < totalDemands; i++) if (!covered[i]) missing.push(i);
+                    for (const miss of missing.slice(0, 200)) {
+                        for (const cand of groupCoverage) {
+                            if (cand.covers.has(miss) && !selected.includes(cand)) {
                                 selected.push(cand);
-                                for (const d of cand.coverArray) {
-                                    if (!covered[d]) { covered[d] = true; remain--; }
-                                }
+                                for (const d of cand.coverArray) covered[d] = true;
+                                break;
                             }
-                        }
-                        
-                        // repair uncovered
-                        if (remain > 0) {
-                            let remainingCandidates = groupCoverage.filter(g => !selected.includes(g));
-                            let iter = 0;
-                            while (remain > 0 && iter++ < 400) {
-                                let bestCand = null;
-                                let bestGain = 0;
-                                for (const cand of remainingCandidates) {
-                                    let gain = 0;
-                                    for (const d of cand.coverArray) if (!covered[d]) gain++;
-                                    if (gain > bestGain) { bestGain = gain; bestCand = cand; }
-                                }
-                                if (!bestCand || bestGain === 0) break;
-                                selected.push(bestCand);
-                                for (const d of bestCand.coverArray) {
-                                    if (!covered[d]) { covered[d] = true; remain--; }
-                                }
-                                remainingCandidates = remainingCandidates.filter(c => c !== bestCand);
-                            }
-                        }
-                        
-                        // final forced cover for any missing demand
-                        if (remain > 0) {
-                            const missing = [];
-                            for (let i = 0; i < totalDemands; i++) if (!covered[i]) missing.push(i);
-                            for (const miss of missing.slice(0, 200)) {
-                                for (const cand of groupCoverage) {
-                                    if (cand.covers.has(miss) && !selected.includes(cand)) {
-                                        selected.push(cand);
-                                        for (const d of cand.coverArray) covered[d] = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            let finalRemain = 0;
-                            for (let i = 0; i < totalDemands; i++) if (!covered[i]) finalRemain++;
-                            if (finalRemain > 0) continue;
-                        }
-                        
-                        // redundancy removal
-                        let changed = true;
-                        for (let opt = 0; opt < 4 && changed; opt++) {
-                            changed = false;
-                            for (let i = selected.length - 1; i >= 0; i--) {
-                                const testSel = selected.filter((_, idx) => idx !== i);
-                                let testCover = new Array(totalDemands).fill(false);
-                                for (const g of testSel) {
-                                    for (const d of g.coverArray) testCover[d] = true;
-                                }
-                                if (testCover.every(v => v === true)) {
-                                    selected = testSel;
-                                    changed = true;
-                                }
-                            }
-                        }
-                        
-                        if (selected.length < bestSize) {
-                            bestSize = selected.length;
-                            bestIndices = selected.map(g => g.idx);
                         }
                     }
-                    if (!bestIndices) throw new Error("No feasible covering solution. Try larger n/k.");
-                    return bestIndices;
-                })();
-                
-                const finalGroups = bestSolution.map(idx => {
-                    const g = groupCoverage.find(c => c.idx === idx);
-                    return { samples: g.group };
-                });
-                
-                // compute j-subset satisfaction rate
-                const allJSubsets = allJ;
-                const coveredDemandFinal = new Array(totalDemands).fill(false);
-                for (const idx of bestSolution) {
-                    const g = groupCoverage.find(c => c.idx === idx);
-                    for (const d of g.coverArray) coveredDemandFinal[d] = true;
-                }
-                const demandsByJIdx = Array.from({ length: allJSubsets.length }, () => []);
-                for (let did = 0; did < demands.length; did++) {
-                    demandsByJIdx[demands[did].jIdx].push(did);
-                }
-                let satisfiedCount = 0;
-                for (let jIdx = 0; jIdx < allJSubsets.length; jIdx++) {
-                    let ok = true;
-                    for (const did of demandsByJIdx[jIdx]) {
-                        if (!coveredDemandFinal[did]) { ok = false; break; }
+                    // final check
+                    let finalRemain = 0;
+                    for (let i = 0; i < totalDemands; i++) if (!covered[i]) finalRemain++;
+                    if (finalRemain > 0) {
+                        throw new Error(`Unable to cover all demands (${finalRemain} missing). Try larger n/k.`);
                     }
-                    if (ok) satisfiedCount++;
                 }
-                const rate = (satisfiedCount / allJSubsets.length) * 100;
-                coverageStats.value = {
-                    satisfiedRate: rate,
-                    satisfied: satisfiedCount,
-                    totalJSubCover: allJSubsets.length
-                };
-                execTime.value = (performance.now() - startPerf) / 1000;
-                addLog(`Solution: ${finalGroups.length} groups, j-coverage ${rate.toFixed(1)}% (${satisfiedCount}/${allJSubsets.length}) in ${execTime.value.toFixed(2)}s`);
-                return finalGroups;
+                
+                // simple redundancy removal: remove groups whose coverage is redundant
+                let changed = true;
+                for (let iter = 0; iter < 3 && changed; iter++) {
+                    changed = false;
+                    for (let i = selected.length - 1; i >= 0; i--) {
+                        const testSel = selected.filter((_, idx) => idx !== i);
+                        let testCover = new Array(totalDemands).fill(false);
+                        for (const g of testSel) {
+                            for (const d of g.coverArray) testCover[d] = true;
+                        }
+                        if (testCover.every(v => v === true)) {
+                            selected = testSel;
+                            changed = true;
+                        }
+                    }
+                }
+                
+                addLog(`Solution: ${selected.length} groups selected (simple greedy)`);
+                return selected.map(g => ({ samples: g.group }));
             };
             
             // manual sample handling
@@ -613,13 +532,13 @@
                 }
                 calculating.value = true;
                 calcProgress.value = 0;
-                statusMsg.value = 'Solving set cover ...';
+                statusMsg.value = 'Covering with strength s ...';
                 results.value = [];
                 try {
                     const solution = await new Promise((resolve, reject) => {
                         setTimeout(() => {
                             try {
-                                const res = computeCovering(
+                                const res = computeCoveringSimple(
                                     selectedSamples.value,
                                     params.value.k,
                                     params.value.j,
@@ -646,8 +565,7 @@
                 let content = `Covering strength s=${params.value.s}\n`;
                 content += `m=${params.value.m}, n=${params.value.n}, k=${params.value.k}, j=${params.value.j}, s=${params.value.s}\n`;
                 content += `Samples: ${selectedSamples.value.join(', ')}\n`;
-                content += `Coverage: ${coverageStats.value.satisfiedRate.toFixed(1)}% (${coverageStats.value.satisfied}/${coverageStats.value.totalJSubCover})\n`;
-                content += `Groups: ${results.value.length}\n\n`;
+                content += `Groups count: ${results.value.length}\n\n`;
                 results.value.forEach((g, idx) => {
                     content += `Group ${idx+1}: {${g.samples.join(', ')}}\n`;
                 });
@@ -661,11 +579,6 @@
                 ElMessage.success('Export complete');
             };
             
-            // no auto random samples
-            onMounted(() => {
-                // intentionally empty: user must input samples manually
-            });
-            
             return {
                 params,
                 selectedSamples,
@@ -675,8 +588,6 @@
                 calculating,
                 calcProgress,
                 statusMsg,
-                coverageStats,
-                execTime,
                 logs,
                 isParamsValid,
                 canCalc,
