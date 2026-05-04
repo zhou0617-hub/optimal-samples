@@ -1,605 +1,652 @@
+以下是您所需的“最优样本选择系统”的英文版本。代码保留了所有算法逻辑，仅将用户界面和提示信息翻译为英文，并移除了注释。
+```html
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Covering · strength s (light)</title>
-    <!-- Vue 3 & Element Plus -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimal Sample Selection System</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <script src="https://unpkg.com/element-plus"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            background: #f2f5f9;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            padding: 24px 20px;
-        }
-        .main-card {
-            max-width: 1320px;
-            margin: 0 auto;
-            background: #ffffff;
-            border-radius: 28px;
-            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.02), 0 2px 6px rgba(0, 0, 0, 0.03);
-            overflow: hidden;
-        }
-        .clean-header {
-            padding: 1rem 2rem;
-            background: #ffffff;
-            border-bottom: 1px solid #eef2f6;
-        }
-        .clean-header h1 {
-            font-size: 1.4rem;
-            font-weight: 600;
-            color: #1f3b4c;
-        }
-        .two-cols {
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .settings-panel {
-            width: 350px;
-            background: #ffffff;
-            border-right: 1px solid #edf2f8;
-            padding: 24px 22px;
-        }
-        .result-panel {
-            flex: 1;
-            padding: 24px 28px;
-            background: #ffffff;
-        }
-        .param-block {
-            margin-bottom: 32px;
-        }
-        .block-title {
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: #2c4f6e;
-            padding-bottom: 8px;
-            margin-bottom: 18px;
-            border-bottom: 1.5px solid #eef2fa;
-        }
-        .param-row {
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .param-label {
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: #3a5e7e;
-            min-width: 70px;
-        }
-        .sample-tag-list {
-            background: #fafcff;
-            border-radius: 18px;
-            padding: 12px;
-            margin-top: 12px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid #eef2f8;
-        }
-        textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
-            font-family: monospace;
-            font-size: 0.8rem;
-            background: #fff;
-            resize: vertical;
-        }
-        .btn-stack {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin: 16px 0 8px;
-        }
-        .groups-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 18px;
-            margin-top: 18px;
-        }
-        .group-card-mini {
-            background: #ffffff;
-            border: 1px solid #eef2f8;
-            border-radius: 24px;
-            padding: 16px;
-        }
-        .group-card-mini .group-name {
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: #2a577b;
-            border-left: 3px solid #8aaec0;
-            padding-left: 10px;
-            margin-bottom: 12px;
-        }
-        .chip-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-        .chip-sample {
-            background: #eff3f8;
-            padding: 4px 12px;
-            border-radius: 40px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: #2a577b;
-        }
-        .cover-meta {
-            font-size: 0.7rem;
-            color: #7994b0;
-        }
-        .log-area-light {
-            background: #f9fbfe;
-            border-radius: 20px;
-            padding: 14px;
-            margin-top: 32px;
-            font-family: 'SF Mono', monospace;
-            font-size: 0.7rem;
-            color: #2b4c6e;
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid #eef2f8;
-        }
-        button.el-button--primary {
-            background-color: #427c9e;
-            border-color: #427c9e;
-            border-radius: 40px;
-        }
-        button.el-button--primary:hover {
-            background-color: #2f6280;
-        }
-        .error-warning {
-            font-size: 0.7rem;
-            background: #fff5f0;
-            padding: 6px 12px;
-            border-radius: 30px;
-            color: #c2410c;
-            margin-top: 10px;
-        }
-        .param-input {
-            width: 130px;
-        }
-        @media (max-width: 760px) {
-            .settings-panel { width: 100%; border-right: none; border-bottom: 1px solid #edf2f8; }
-            .param-row { flex-wrap: wrap; }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 26px; margin-bottom: 10px; }
+        .main-layout { display: grid; grid-template-columns: 400px 1fr; min-height: 750px; }
+        @media (max-width: 1200px) { .main-layout { grid-template-columns: 1fr; } }
+        .control-panel { background: #f8f9fa; border-right: 1px solid #e4e7ed; padding: 20px; overflow-y: auto; max-height: 90vh; }
+        .panel-section { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+        .section-title { font-size: 16px; color: #0083b0; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .param-row { margin-bottom: 15px; }
+        .param-label { display: block; margin-bottom: 5px; color: #606266; font-size: 14px; font-weight: 500; }
+        .param-hint { font-size: 12px; color: #909399; margin-top: 5px; }
+        .sample-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; max-height: 150px; overflow-y: auto; padding: 10px; background: #f5f7fa; border-radius: 4px; }
+        .action-btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .content-area { padding: 20px; overflow-y: auto; max-height: 90vh; background: white; }
+        .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: linear-gradient(135deg, #00c9ff 0%, #dfffa8 100%); color: white; padding: 20px; border-radius: 8px; }
+        .stat-value { font-size: 28px; font-weight: bold; margin: 10px 0; }
+        .result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .result-card { border: 1px solid #e4e7ed; border-radius: 8px; padding: 15px; background: white; transition: all 0.3s; border-left: 4px solid #69d4ec; }
+        .result-samples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .db-list { margin-top: 15px; max-height: 400px; overflow-y: auto; }
+        .db-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f5f7fa; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #fcbc80; transition: all 0.3s; }
+        .db-item:hover { background: #e6f7ff; transform: translateX(5px); }
+        .db-info { flex: 1; min-width: 0; }
+        .db-filename { font-weight: 600; color: #2c3e50; font-size: 14px; word-break: break-all; }
+        .db-meta { font-size: 12px; color: #909399; margin-top: 4px; }
+        .db-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .filename-format { background: #f0f9ff; border: 1px dashed #00c9ff; padding: 10px; border-radius: 4px; font-size: 12px; color: #bec0c5; margin-top: 10px; font-family: monospace; }
+        .algo-log { margin-top: 20px; padding: 15px; background: #f5f7fa; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .loading-spinner { width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #00c9ff; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .input-area { margin-top: 10px; }
+        textarea { width: 100%; padding: 8px; border: 1px solid #dcdfe6; border-radius: 4px; font-family: monospace; resize: vertical; }
+        .db-badge { display: inline-block; padding: 2px 8px; background: #e6f7ff; color: #00c9ff; border-radius: 4px; font-size: 11px; margin-left: 8px; }
+        .repeat-hint { font-size: 12px; color: #909399; margin-left: 8px; }
     </style>
 </head>
 <body>
 <div id="app">
-    <div class="main-card">
-        <div class="clean-header">
-            <h1>🎯 Optimal Covering · strength s</h1>
+    <div class="container">
+        <div class="header">
+            <h1>Optimal Sample Selection System</h1>
+            <div style="margin-top: 8px; font-size: 13px; opacity: 0.9;">
+                Support save/load/delete history | Filename format: m-n-k-j-s-lambda-x-y
+            </div>
         </div>
-        <div class="two-cols">
-            <!-- left panel: parameters + samples -->
-            <div class="settings-panel">
-                <div class="param-block">
-                    <div class="block-title">Parameters</div>
-                    <div class="param-row">
-                        <span class="param-label">m (total)</span>
-                        <el-input-number v-model="params.m" :min="3" :max="80" :step="1" class="param-input" controls-position="right"></el-input-number>
-                    </div>
-                    <div class="param-row">
-                        <span class="param-label">n (select)</span>
-                        <el-input-number v-model="params.n" :min="2" :max="params.m" :step="1" class="param-input" controls-position="right"></el-input-number>
-                    </div>
-                    <div class="param-row">
-                        <span class="param-label">k (group)</span>
-                        <el-input-number v-model="params.k" :min="2" :max="params.n" :step="1" class="param-input" controls-position="right"></el-input-number>
-                    </div>
-                    <div class="param-row">
-                        <span class="param-label">j (subset)</span>
-                        <el-input-number v-model="params.j" :min="2" :max="params.k" :step="1" class="param-input" controls-position="right"></el-input-number>
-                    </div>
-                    <div class="param-row">
-                        <span class="param-label">s (strength)</span>
-                        <el-input-number v-model="params.s" :min="1" :max="params.j" :step="1" class="param-input" controls-position="right"></el-input-number>
-                    </div>
-                    <div v-if="!isParamsValid" class="error-warning">⚠️ s ≤ j ≤ k ≤ n ≤ m</div>
+        <div class="main-layout">
+            <div class="control-panel">
+                <div class="panel-section">
+                    <div class="section-title"><span>Parameters</span></div>
+                    <div class="param-row"><label class="param-label">Total samples (m)</label><el-slider v-model="params.m" :min="1" :max="100" show-input></el-slider></div>
+                    <div class="param-row"><label class="param-label">Selected count (n)</label><el-slider v-model="params.n" :min="2" :max="30" show-input></el-slider></div>
+                    <div class="param-row"><label class="param-label">Group size (k)</label><el-slider v-model="params.k" :min="2" :max="15" show-input></el-slider></div>
+                    <div class="param-row"><label class="param-label">Observation subset (j)</label><el-slider v-model="params.j" :min="params.s" :max="params.k" show-input></el-slider></div>
+                    <div class="param-row"><label class="param-label">Coverage strength (s)</label><el-slider v-model="params.s" :min="1" :max="params.j" show-input></el-slider></div>
+                    <div class="param-row"><label class="param-label">Coverage number (λ)</label><el-slider v-model="params.lambda" :min="1" :max="20" show-input></el-slider></div>
+                    <el-alert v-if="!isParamsValid" title="Parameter error: must satisfy s ≤ j ≤ k ≤ n ≤ m" type="error" :closable="false" style="margin-top: 10px;"></el-alert>
                 </div>
 
-                <div class="param-block">
-                    <div class="block-title">Sample set (exactly {{ params.n }} items)</div>
-                    <div style="margin: 12px 0 6px;">
-                        <textarea v-model="manualRaw" rows="2" placeholder="e.g. 5,12,18,27,33,41" @input="parseManualInput"></textarea>
-                        <el-button size="small" style="margin-top: 8px; width:100%" @click="applyManualSamples" :disabled="parsedPreview.length === 0" plain>
-                            Use {{ parsedPreview.length }} samples
-                        </el-button>
+                <div class="panel-section">
+                    <div class="section-title"><span>Sample selection (n={{ params.n }})</span></div>
+                    <div class="action-btn-group"><el-button type="primary" @click="randomSelect" :disabled="!isParamsValid">Randomly select {{ params.n }} samples</el-button></div>
+                    <div class="input-area">
+                        <div class="param-label" style="margin-top: 15px;">Or manually input samples (comma/space/newline separated):</div>
+                        <textarea v-model="manualInputText" rows="3" placeholder="e.g.: 1, 2, 3, 4, 5, 6, 7, 8" @input="parseManualInput"></textarea>
+                        <el-button type="success" size="small" style="margin-top: 8px; width: 100%;" @click="confirmManualInput" :disabled="parsedSamples.length === 0">Confirm using these {{ parsedSamples.length }} samples</el-button>
                     </div>
-                    <div v-if="selectedSamples.length > 0">
-                        <div class="param-label">Current</div>
-                        <div class="sample-tag-list">
-                            <el-tag v-for="s in selectedSamples" :key="s" closable @close="removeSampleItem(s)" size="small" effect="plain">
-                                {{ s }}
-                            </el-tag>
-                        </div>
-                        <el-button size="small" type="warning" plain style="margin-top: 12px;" @click="clearAllSamples">Clear</el-button>
+                    <div v-if="selectedSamples.length > 0" style="margin-top: 15px;">
+                        <div class="param-label">Currently selected samples: <span class="db-badge">{{ selectedSamples.length }} items</span></div>
+                        <div class="sample-tags"><el-tag v-for="s in selectedSamples" :key="s" effect="dark" size="small" closable @close="removeSample(s)">{{ s }}</el-tag></div>
+                        <el-button type="warning" size="small" style="margin-top: 10px;" @click="clearSamples">Clear and reselect</el-button>
                     </div>
                 </div>
 
-                <div class="param-block">
-                    <el-button type="primary" size="large" @click="startCovering" :disabled="!canCalc" :loading="calculating" style="width:100%; border-radius: 60px;">
-                        {{ calculating ? 'Solving...' : 'Compute groups' }}
+                <div class="panel-section">
+                    <div class="section-title"><span>Calculation control</span></div>
+                    <div class="param-row">
+                        <label class="param-label">
+                            Repetitions (N) 
+                            <span class="repeat-hint">Multiple runs to get best result</span>
+                        </label>
+                        <el-slider v-model="params.repeatCount" :min="1" :max="20" show-input></el-slider>
+                    </div>
+                    <el-button type="success" size="large" @click="startCalculate" :disabled="!canCalculate" :loading="calculating" style="width: 100%;">
+                        {{ calculating ? `Calculating (${currentRepeat}/${params.repeatCount})` : 'Start calculation of optimal solution' }}
                     </el-button>
-                    <div v-if="calculating" style="margin-top: 12px;">
-                        <el-progress :percentage="calcProgress" :stroke-width="5" :show-text="false"></el-progress>
-                        <div style="font-size:0.7rem; text-align:center; margin-top:6px; color:#5d7f9e;">{{ statusMsg }}</div>
+                    <div v-if="calculating" style="margin-top: 10px;">
+                        <el-progress :percentage="calcProgress" :stroke-width="10"></el-progress>
+                        <div style="font-size: 12px; color: #909399; text-align: center; margin-top: 5px;">{{ statusText }}</div>
                     </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="section-title"><span>History</span></div>
+                    <div class="filename-format">Filename format:<br>{{ params.m }}-{{ params.n }}-{{ params.k }}-{{ params.j }}-{{ params.s }}-{{ params.lambda }}-x-y<br><span style="color: #999;">(x=run count, y=result groups)</span></div>
+                    <el-button type="primary" style="width: 100%; margin-top: 10px;" @click="saveToDB" :disabled="results.length === 0">Save parameters and results</el-button>
+                    <div v-if="lastSavedFile" style="margin-top: 10px; padding: 8px; background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 4px; font-size: 12px; color: #52c41a;">✓ Saved: {{ lastSavedFile }}</div>
                 </div>
             </div>
 
-            <!-- right panel: results -->
-            <div class="result-panel">
-                <div v-if="results.length === 0 && !calculating" style="text-align: center; padding: 60px 20px; background: #fbfdfe; border-radius: 32px; border:1px solid #eef2f8;">
-                    <span style="font-size:2rem;">🧩</span>
-                    <p style="color:#6f8dab; margin-top: 12px;">Set parameters → input samples → compute</p>
+            <div class="content-area">
+                <div class="panel-section" v-if="dbFiles.length > 0" style="margin-bottom: 20px;">
+                    <div class="section-title"><span>History ({{ dbFiles.length }} files)</span></div>
+                    <div class="param-hint" style="margin-bottom: 10px;">Click "Load" to display results, click "Delete" to remove file</div>
+                    <div class="db-list"><div v-for="file in dbFiles" :key="file.id" class="db-item"><div class="db-info"><div class="db-filename">{{ file.filename }}</div><div class="db-meta">Saved: {{ file.timestamp }} | Samples: {{ file.samples.join(', ') }} | Results: {{ file.resultCount }} groups</div></div><div class="db-actions"><el-button type="primary" size="small" @click="executeDB(file)">Load</el-button><el-button type="danger" size="small" @click="deleteDB(file.id)">Delete</el-button></div></div></div>
                 </div>
-
-                <div v-if="results.length > 0">
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px;">
-                        <h3 style="font-weight: 500; font-size: 1rem; color:#1a3a55;">Groups (k={{ params.k }})</h3>
-                        <el-button size="small" text @click="exportResult">📄 Export</el-button>
+                <div v-else class="panel-section" style="margin-bottom: 20px; background: #fafafa;"><div class="section-title"><span>History</span></div><div style="text-align: center; color: #999; padding: 20px;">No history, please calculate and save results.</div></div>
+                
+                <div class="stats-cards" v-if="results.length > 0">
+                    <div class="stat-card"><div class="stat-label">Groups count (y)</div><div class="stat-value">{{ results.length }}</div></div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #ffb9c9 0%, #ff4b2b 100%);"><div class="stat-label">Coverage satisfaction rate</div><div class="stat-value">{{ coverageStats.satisfiedRate.toFixed(1) }}%</div><div style="font-size: 12px; margin-top: 5px;">{{ coverageStats.satisfied }}/{{ coverageStats.totalJ }} satisfy λ≥{{ params.lambda }}</div></div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #32c71f 0%, #9affc1 100%);"><div class="stat-label">Computation time</div><div class="stat-value">{{ executionTime.toFixed(2) }}s</div></div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #ed3eb6 0%, #bf5cba 100%);"><div class="stat-label">Current run count</div><div class="stat-value">#{{ currentRunCount }}</div></div>
+                </div>
+                
+                <div class="algo-log" v-if="algoLog.length > 0">
+                    <div v-for="(log, idx) in algoLog.slice(-30)" :key="idx">
+                        <span style="color: #909399;">[{{ log.time }}]</span>
+                        <span :style="{color: log.color || '#606266'}">{{ log.message }}</span>
                     </div>
-                    <div class="groups-grid">
-                        <div v-for="(group, idx) in results" :key="idx" class="group-card-mini">
-                            <div class="group-name">Group {{ idx+1 }}</div>
-                            <div class="chip-group">
-                                <span v-for="val in group.samples" :key="val" class="chip-sample">{{ val }}</span>
+                </div>
+                
+                <div v-if="results.length > 0" style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="color: #2c3e50;">Results (k={{ params.k }}) <span v-if="currentDBFile" class="db-badge">from: {{ currentDBFile }}</span></h3>
+                        <el-button type="primary" size="small" @click="exportResult">Export TXT</el-button>
+                    </div>
+                    <div class="result-grid">
+                        <div v-for="(group, idx) in results" :key="idx" class="result-card">
+                            <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">Group {{ idx + 1 }}</div>
+                            <div class="result-samples">
+                                <el-tag v-for="sample in group.samples" :key="sample" type="primary" effect="plain" size="small">{{ sample }}</el-tag>
                             </div>
-                            <div class="cover-meta">covers all s‑subsets ✓</div>
+                            <div style="margin-top: 8px; font-size: 12px; color: #909399;">
+                                Covers {{ group.coveredJSubsetCount || 0 }} j-subsets
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="log-area-light" v-if="logs.length > 0">
-                    <div v-for="(lg, idx) in logs.slice(-12)" :key="idx" style="font-family: monospace; font-size:0.7rem; line-height:1.4;">
-                        <span style="color:#8da1b5;">[{{ lg.time }}]</span> {{ lg.text }}
-                    </div>
+                
+                <div v-if="results.length === 0 && !calculating" style="text-align: center; padding: 60px 20px; color: #909399;">
+                    <h3 style="margin-bottom: 10px;">Waiting for calculation or loading history</h3>
+                    <p>1. Set parameters and calculate/save<br>2. Or load existing results from the history list above</p>
                 </div>
             </div>
         </div>
     </div>
-
-    <div v-if="calculating" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.9); backdrop-filter: blur(1px); display:flex; align-items:center; justify-content:center; z-index:1000;">
-        <div style="background: white; padding: 24px 32px; border-radius: 48px; box-shadow: 0 12px 28px rgba(0,0,0,0.08); text-align: center;">
-            <div style="width:36px; height:36px; border:3px solid #e0e8f0; border-top-color:#427c9e; border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto 16px;"></div>
-            <div style="color:#2b5a7a;">{{ statusMsg }}</div>
-        </div>
+    <div v-if="calculating" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div style="margin-top: 20px; color: #606266;">{{ statusText }}</div>
     </div>
-    <style>
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
 </div>
 
 <script>
-    const { createApp, ref, computed } = Vue;
-    const { ElMessage } = ElementPlus;
+    const { createApp, ref, computed, onMounted, nextTick } = Vue;
+    const { ElMessage, ElMessageBox } = ElementPlus;
 
-    createApp({
+    const POP_COUNT_16 = (() => {
+        const tbl = new Uint8Array(65536);
+        for (let i = 0; i < 65536; i++) tbl[i] = (i&1)+((i>>>1)&1)+((i>>>2)&1)+((i>>>3)&1)+((i>>>4)&1)+((i>>>5)&1)+((i>>>6)&1)+((i>>>7)&1)+((i>>>8)&1)+((i>>>9)&1)+((i>>>10)&1)+((i>>>11)&1)+((i>>>12)&1)+((i>>>13)&1)+((i>>>14)&1)+((i>>>15)&1);
+        return tbl;
+    })();
+
+    class BitSet {
+        constructor(size) {
+            this.size = size;
+            this.bits = new Uint32Array(Math.ceil(size / 32));
+        }
+        setAll() {
+            for (let i = 0; i < this.bits.length - 1; i++) this.bits[i] = 0xFFFFFFFF;
+            if (this.bits.length > 0) {
+                const rem = this.size % 32;
+                this.bits[this.bits.length - 1] = rem ? (1 << rem) - 1 : 0xFFFFFFFF;
+            }
+            return this;
+        }
+        setBit(idx) { this.bits[idx >>> 5] |= (1 << (idx & 31)); }
+        clearBit(idx) { this.bits[idx >>> 5] &= ~(1 << (idx & 31)); }
+        getBit(idx) { return (this.bits[idx >>> 5] & (1 << (idx & 31))) !== 0; }
+        and(other) { for (let i = 0; i < this.bits.length; i++) this.bits[i] &= other.bits[i]; }
+        or(other) { for (let i = 0; i < this.bits.length; i++) this.bits[i] |= other.bits[i]; }
+        popcount() {
+            let cnt = 0;
+            for (let i = 0; i < this.bits.length; i++) {
+                const v = this.bits[i];
+                cnt += POP_COUNT_16[v & 0xFFFF] + POP_COUNT_16[(v >>> 16) & 0xFFFF];
+            }
+            return cnt;
+        }
+        clone() { const nb = new BitSet(this.size); nb.bits.set(this.bits); return nb; }
+        setFrom(other) { this.bits.set(other.bits); }
+    }
+
+    function* iterateBits(bitset) {
+        for (let i = 0; i < bitset.bits.length; i++) {
+            let word = bitset.bits[i];
+            if (word === 0) continue;
+            const base = i * 32;
+            for (let b = 0; b < 32; b++) {
+                if (word & (1 << b)) {
+                    yield base + b;
+                }
+            }
+        }
+    }
+
+    function combinationsOfArray(arr, k) {
+        const res = [];
+        const n = arr.length;
+        if (k > n || k <= 0) return res;
+        const idx = Array.from({ length: k }, (_, i) => i);
+        while (true) {
+            res.push(idx.map(i => arr[i]));
+            let i = k - 1;
+            while (i >= 0 && idx[i] === n - k + i) i--;
+            if (i < 0) break;
+            idx[i]++;
+            for (let j = i + 1; j < k; j++) idx[j] = idx[j - 1] + 1;
+        }
+        return res;
+    }
+
+    function* submasksOfSize(mask, size) {
+        const bits = [];
+        let m = mask;
+        while (m) { const lb = m & -m; bits.push(Math.log2(lb)); m ^= lb; }
+        if (bits.length < size) return;
+        const combs = combinationsOfArray(bits, size);
+        for (const c of combs) yield c.reduce((acc, b) => acc | (1 << b), 0);
+    }
+
+    function randomKGroup(n, k) {
+        const chosen = new Set();
+        while (chosen.size < k) chosen.add(Math.floor(Math.random() * n));
+        return [...chosen].reduce((mask, idx) => mask | (1 << idx), 0);
+    }
+
+    function extractSetBits(mask) {
+        const arr = [];
+        let m = mask;
+        while (m) { const lb = m & -m; arr.push(Math.log2(lb)); m ^= lb; }
+        return arr;
+    }
+
+    function binomial(n, k) {
+        if (k < 0 || k > n) return 0;
+        if (k === 0 || k === n) return 1;
+        let res = 1;
+        for (let i = 1; i <= k; i++) { res *= n - i + 1; res /= i; }
+        return Math.round(res);
+    }
+
+    const App = {
         setup() {
-            const params = ref({ m: 45, n: 8, k: 6, j: 4, s: 2 });
+            const params = ref({ m: 45, n: 8, k: 6, j: 4, s: 4, lambda: 1, repeatCount: 5 });
             const selectedSamples = ref([]);
-            const manualRaw = ref('');
-            const parsedPreview = ref([]);
-            
+            const manualInputText = ref('');
+            const parsedSamples = ref([]);
             const results = ref([]);
             const calculating = ref(false);
             const calcProgress = ref(0);
-            const statusMsg = ref('');
-            const logs = ref([]);
-            
+            const statusText = ref('');
+            const coverageStats = ref({ satisfiedRate: 0, satisfied: 0, totalJ: 0 });
+            const executionTime = ref(0);
+            const algoLog = ref([]);
+            const currentRunCount = ref(0);
+            const currentRepeat = ref(0);
+            const lastSavedFile = ref('');
+            const currentDBFile = ref('');
+            const dbFiles = ref([]);
+            const DB_STORAGE_KEY = 'optimal_samples_db_files';
+
             const isParamsValid = computed(() => {
                 const p = params.value;
-                return p.s <= p.j && p.j <= p.k && p.k <= p.n && p.n <= p.m;
+                return p.s <= p.j && p.j <= p.k && p.k <= p.n && p.n <= p.m && p.lambda >= 1;
             });
-            
-            const canCalc = computed(() => {
-                return isParamsValid.value && selectedSamples.value.length === params.value.n && !calculating.value;
-            });
-            
-            const addLog = (msg) => {
+            const canCalculate = computed(() => 
+                isParamsValid.value && selectedSamples.value.length === params.value.n && !calculating.value
+            );
+
+            const log = (msg, color) => {
                 const time = new Date().toLocaleTimeString();
-                logs.value.push({ time, text: msg });
-                if (logs.value.length > 45) logs.value.shift();
+                algoLog.value.push({ time, message: msg, color });
+                if (algoLog.value.length > 50) algoLog.value.shift();
             };
-            
-            // combinatorial helper
-            const combine = (arr, size) => {
-                const result = [];
-                const n = arr.length;
-                if (size > n || size <= 0) return result;
-                const indices = Array.from({ length: size }, (_, i) => i);
-                while (true) {
-                    result.push(indices.map(i => arr[i]));
-                    let i = size - 1;
-                    while (i >= 0 && indices[i] === n - size + i) i--;
-                    if (i < 0) break;
-                    indices[i]++;
-                    for (let j = i + 1; j < size; j++) indices[j] = indices[j-1] + 1;
-                }
-                return result;
-            };
-            
-            // simplified greedy covering (single random shuffle + redundancy removal)
-            // no multi-start, no heavy statistics, returns groups that cover all demands (or throws)
-            const computeCoveringSimple = (samples, k, j, s) => {
-                const n = samples.length;
-                // check combinatorial explosion (soft limit)
-                const approxGroups = (function approxBinom(nn, kk) {
-                    if (kk > nn) return 0;
-                    let res = 1;
-                    for (let i = 1; i <= kk; i++) {
-                        res = res * (nn - kk + i) / i;
-                        if (res > 120000) return 1e9;
-                    }
-                    return res;
-                })(n, k);
-                if (approxGroups > 150000) {
-                    throw new Error(`Too many k‑groups (C(${n},${k}) ~ large). Reduce n or k.`);
-                }
-                
-                // all j-subsets and demands: (j-subset, its s-subset)
-                const allJ = combine(samples, j);
-                if (allJ.length === 0) throw new Error("No j‑subsets");
-                
-                // demand list: each entry = { jIdx, sSubArray }
-                const demands = [];
-                const sSubToDemandIds = new Map(); // string -> array of demand indices
-                for (let jIdx = 0; jIdx < allJ.length; jIdx++) {
-                    const jSub = allJ[jIdx];
-                    const sSubs = combine(jSub, s);
-                    for (const sSub of sSubs) {
-                        const did = demands.length;
-                        demands.push({ jIdx, sSub });
-                        const key = sSub.join(',');
-                        if (!sSubToDemandIds.has(key)) sSubToDemandIds.set(key, []);
-                        sSubToDemandIds.get(key).push(did);
-                    }
-                }
-                const totalDemands = demands.length;
-                if (totalDemands === 0) throw new Error("No demands (s too large?)");
-                addLog(`Demands: ${totalDemands}`);
-                
-                // all k-groups
-                const allKGroups = combine(samples, k);
-                addLog(`Candidate groups: ${allKGroups.length}`);
-                if (allKGroups.length === 0) throw new Error("No k‑groups available");
-                
-                // precompute coverage for each k-group
-                const groupCoverage = [];
-                for (let gIdx = 0; gIdx < allKGroups.length; gIdx++) {
-                    const group = allKGroups[gIdx];
-                    const groupSSubs = combine(group, s);
-                    const coveredSet = new Set();
-                    for (const sSub of groupSSubs) {
-                        const key = sSub.join(',');
-                        const demandIds = sSubToDemandIds.get(key);
-                        if (demandIds) {
-                            for (const did of demandIds) coveredSet.add(did);
-                        }
-                    }
-                    if (coveredSet.size > 0) {
-                        groupCoverage.push({
-                            idx: gIdx,
-                            group: group,
-                            covers: coveredSet,
-                            coverArray: Array.from(coveredSet)
-                        });
-                    }
-                }
-                if (groupCoverage.length === 0) throw new Error("No group can cover any demand");
-                addLog(`Valid groups: ${groupCoverage.length}`);
-                
-                // ----- simple greedy with random shuffle (single pass) -----
-                // shuffle candidates
-                const candidates = [...groupCoverage];
-                for (let i = candidates.length - 1; i > 0; i--) {
-                    const r = Math.floor(Math.random() * (i + 1));
-                    [candidates[i], candidates[r]] = [candidates[r], candidates[i]];
-                }
-                
-                let selected = [];
-                let covered = new Array(totalDemands).fill(false);
-                let remain = totalDemands;
-                
-                // greedy pick
-                for (const cand of candidates) {
-                    if (remain === 0) break;
-                    let newCover = 0;
-                    for (const d of cand.coverArray) if (!covered[d]) newCover++;
-                    if (newCover > 0) {
-                        selected.push(cand);
-                        for (const d of cand.coverArray) {
-                            if (!covered[d]) { covered[d] = true; remain--; }
-                        }
-                    }
-                }
-                
-                // if some demands remain, brute force add groups that cover them
-                if (remain > 0) {
-                    let remainingCandidates = groupCoverage.filter(g => !selected.includes(g));
-                    let attempts = 0;
-                    while (remain > 0 && attempts++ < 400 && remainingCandidates.length > 0) {
-                        let bestCand = null;
-                        let bestGain = 0;
-                        for (const cand of remainingCandidates) {
-                            let gain = 0;
-                            for (const d of cand.coverArray) if (!covered[d]) gain++;
-                            if (gain > bestGain) { bestGain = gain; bestCand = cand; }
-                        }
-                        if (!bestCand || bestGain === 0) break;
-                        selected.push(bestCand);
-                        for (const d of bestCand.coverArray) {
-                            if (!covered[d]) { covered[d] = true; remain--; }
-                        }
-                        remainingCandidates = remainingCandidates.filter(c => c !== bestCand);
-                    }
-                }
-                
-                // final emergency: try any group covering each missing demand individually
-                if (remain > 0) {
-                    const missing = [];
-                    for (let i = 0; i < totalDemands; i++) if (!covered[i]) missing.push(i);
-                    for (const miss of missing.slice(0, 200)) {
-                        for (const cand of groupCoverage) {
-                            if (cand.covers.has(miss) && !selected.includes(cand)) {
-                                selected.push(cand);
-                                for (const d of cand.coverArray) covered[d] = true;
-                                break;
-                            }
-                        }
-                    }
-                    // final check
-                    let finalRemain = 0;
-                    for (let i = 0; i < totalDemands; i++) if (!covered[i]) finalRemain++;
-                    if (finalRemain > 0) {
-                        throw new Error(`Unable to cover all demands (${finalRemain} missing). Try larger n/k.`);
-                    }
-                }
-                
-                // simple redundancy removal: remove groups whose coverage is redundant
-                let changed = true;
-                for (let iter = 0; iter < 3 && changed; iter++) {
-                    changed = false;
-                    for (let i = selected.length - 1; i >= 0; i--) {
-                        const testSel = selected.filter((_, idx) => idx !== i);
-                        let testCover = new Array(totalDemands).fill(false);
-                        for (const g of testSel) {
-                            for (const d of g.coverArray) testCover[d] = true;
-                        }
-                        if (testCover.every(v => v === true)) {
-                            selected = testSel;
-                            changed = true;
-                        }
-                    }
-                }
-                
-                addLog(`Solution: ${selected.length} groups selected (simple greedy)`);
-                return selected.map(g => ({ samples: g.group }));
-            };
-            
-            // manual sample handling
+
             const parseManualInput = () => {
-                const txt = manualRaw.value;
-                const nums = txt.split(/[,\s\n]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1 && n <= params.value.m);
-                const uniq = [...new Set(nums)].sort((a, b) => a - b);
-                parsedPreview.value = uniq;
+                const text = manualInputText.value;
+                const nums = text.split(/[,\s\n]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= 1 && n <= params.value.m);
+                parsedSamples.value = [...new Set(nums)].sort((a,b)=>a-b);
             };
-            
-            const applyManualSamples = () => {
-                if (parsedPreview.value.length === 0) { ElMessage.warning('No valid numbers'); return; }
-                if (parsedPreview.value.length !== params.value.n) {
-                    ElMessage.warning(`Need exactly ${params.value.n} samples (${parsedPreview.value.length} provided)`);
-                    return;
-                }
-                selectedSamples.value = [...parsedPreview.value];
-                manualRaw.value = '';
-                parsedPreview.value = [];
-                addLog(`Samples: ${selectedSamples.value.join(', ')}`);
-                ElMessage.success(`Applied ${selectedSamples.value.length} samples`);
-            };
-            
-            const removeSampleItem = (s) => {
-                selectedSamples.value = selectedSamples.value.filter(x => x !== s);
+            const confirmManualInput = () => {
+                if (parsedSamples.value.length === 0) { ElMessage.warning('Please enter valid sample numbers'); return; }
+                if (parsedSamples.value.length < params.value.k) { ElMessage.error(`Number of samples (${parsedSamples.value.length}) cannot be less than k (${params.value.k})`); return; }
+                selectedSamples.value = [...parsedSamples.value];
                 params.value.n = selectedSamples.value.length;
+                manualInputText.value = ''; parsedSamples.value = [];
+                ElMessage.success(`Successfully set ${params.value.n} samples`);
             };
-            
-            const clearAllSamples = () => {
-                selectedSamples.value = [];
-                params.value.n = 0;
+            const randomSelect = () => {
+                const arr = Array.from({length: params.value.m}, (_,i) => i+1);
+                for (let i = arr.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+                selectedSamples.value = arr.slice(0, params.value.n).sort((a,b) => a-b);
+                log(`Random selection: [${selectedSamples.value.join(', ')}]`);
+                ElMessage.success(`Randomly selected ${params.value.n} samples`);
             };
-            
-            const startCovering = async () => {
-                if (!canCalc.value) {
-                    ElMessage.error('Invalid parameters or sample count mismatch');
-                    return;
+            const removeSample = (s) => { selectedSamples.value = selectedSamples.value.filter(x => x !== s); params.value.n = selectedSamples.value.length; };
+            const clearSamples = () => { selectedSamples.value = []; params.value.n = 0; };
+
+const generalCoveringDesign = (sampleNums, k, j, s, lambda) => {
+    const startTime = performance.now();
+    const n = sampleNums.length;
+    if (n > 30) throw new Error('n cannot exceed 30 for bit operations');
+
+    const totalJ = binomial(n, j);
+    if (totalJ > 250000) throw new Error(`Total j-subsets (${totalJ}) too large, please reduce j or n.`);
+
+    log(`Algorithm started: n=${n}, k=${k}, j=${j}, s=${s}, λ=${lambda}`);
+    const idxToSample = sampleNums;
+
+    const allJSubsets = [];
+    const combos = combinationsOfArray([...Array(n).keys()], j);
+    combos.forEach((c, idx) => { allJSubsets.push({ idx, mask: c.reduce((acc,b) => acc | (1<<b), 0) }); });
+
+    const sSubToJListMap = new Map();
+    const sSubToJMaskMap = new Map();
+    const useSparse = (j - s <= 3) && (totalJ > 50000);
+    for (const { idx, mask: jMask } of allJSubsets) {
+        for (const sMask of submasksOfSize(jMask, s)) {
+            if (useSparse) {
+                if (!sSubToJListMap.has(sMask)) sSubToJListMap.set(sMask, []);
+                sSubToJListMap.get(sMask).push(idx);
+            } else {
+                if (!sSubToJMaskMap.has(sMask)) sSubToJMaskMap.set(sMask, new BitSet(totalJ));
+                sSubToJMaskMap.get(sMask).setBit(idx);
+            }
+        }
+    }
+    log(`Preprocessing done: number of s-subsets=${useSparse ? sSubToJListMap.size : sSubToJMaskMap.size}`);
+
+    const coverCache = new Map();
+    const getCoverMask = (kMask) => {
+        if (coverCache.has(kMask)) return coverCache.get(kMask).clone();
+        const cover = new BitSet(totalJ);
+        for (const sMask of submasksOfSize(kMask, s)) {
+            if (useSparse) {
+                const list = sSubToJListMap.get(sMask);
+                if (list) for (const idx of list) cover.setBit(idx);
+            } else {
+                const bs = sSubToJMaskMap.get(sMask);
+                if (bs) cover.or(bs);
+            }
+        }
+        coverCache.set(kMask, cover);
+        return cover.clone();
+    };
+
+    const solveFromPartial = (initialMasks, maxGreedyIter = 1000, maxRepairIter = 2000) => {
+        const covCount = new Int32Array(totalJ);
+        const unsatisfied = new BitSet(totalJ).setAll();
+
+        const applyGroup = (kMask, add = true) => {
+            const cover = getCoverMask(kMask);
+            for (const bitIdx of iterateBits(cover)) {
+                if (add) {
+                    if (covCount[bitIdx] >= lambda) continue;
+                    covCount[bitIdx]++;
+                    if (covCount[bitIdx] >= lambda) unsatisfied.clearBit(bitIdx);
+                } else {
+                    covCount[bitIdx]--;
+                    if (covCount[bitIdx] < lambda) unsatisfied.setBit(bitIdx);
                 }
+            }
+        };
+
+        const masks = [...initialMasks];
+        for (const m of masks) applyGroup(m, true);
+
+        const BATCH_SIZE_GREEDY = 2000;
+        let iter = 0;
+        while (unsatisfied.popcount() > 0 && iter < maxGreedyIter) {
+            let bestMask = null, bestContrib = -1;
+            for (let t = 0; t < BATCH_SIZE_GREEDY; t++) {
+                const cand = randomKGroup(n, k);
+                if (masks.includes(cand)) continue;
+                const cover = getCoverMask(cand);
+                const contrib = cover.clone(); contrib.and(unsatisfied);
+                const cnt = contrib.popcount();
+                if (cnt > bestContrib) {
+                    bestContrib = cnt; bestMask = cand;
+                    if (cnt === unsatisfied.popcount()) break;
+                }
+            }
+            if (bestMask === null || bestContrib === 0) break;
+            masks.push(bestMask);
+            applyGroup(bestMask, true);
+            iter++;
+        }
+
+        if (unsatisfied.popcount() > 0) {
+            let repairIter = 0;
+            while (unsatisfied.popcount() > 0 && repairIter < maxRepairIter) {
+                repairIter++;
+                let targetIdx = -1;
+                for (let i = 0; i < totalJ; i++) if (covCount[i] < lambda) { targetIdx = i; break; }
+                if (targetIdx === -1) break;
+                const jMask = allJSubsets[targetIdx].mask;
+                const jBits = extractSetBits(jMask);
+                const remaining = [...Array(n).keys()].filter(x => !jBits.includes(x));
+                const extra = remaining.sort(() => Math.random() - 0.5).slice(0, k - j);
+                const kMask = extra.reduce((acc, b) => acc | (1 << b), jMask);
+                masks.push(kMask);
+                applyGroup(kMask, true);
+            }
+            if (unsatisfied.popcount() > 0) {
+                return null;
+            }
+        }
+
+        return masks;
+    };
+
+    let bestMasks = solveFromPartial([], 6000, 8000);
+    if (!bestMasks) throw new Error('Initial solving failed');
+
+    const covCount = new Int32Array(totalJ);
+    const unsatisfied = new BitSet(totalJ).setAll();
+    const applyGroup = (kMask, add = true) => {
+        const cover = getCoverMask(kMask);
+        for (const bitIdx of iterateBits(cover)) {
+            if (add) {
+                if (covCount[bitIdx] >= lambda) continue;
+                covCount[bitIdx]++;
+                if (covCount[bitIdx] >= lambda) unsatisfied.clearBit(bitIdx);
+            } else {
+                covCount[bitIdx]--;
+                if (covCount[bitIdx] < lambda) unsatisfied.setBit(bitIdx);
+            }
+        }
+    };
+    for (const m of bestMasks) applyGroup(m, true);
+
+    let improved = true;
+    while (improved) {
+        improved = false;
+        for (let i = bestMasks.length - 1; i >= 0; i--) {
+            const mask = bestMasks[i];
+            applyGroup(mask, false);
+            let ok = true;
+            for (let c = 0; c < totalJ; c++) if (covCount[c] < lambda) { ok = false; break; }
+            if (ok) {
+                bestMasks.splice(i, 1);
+                improved = true;
+                log(`Removed redundant group, now ${bestMasks.length} groups`);
+            } else {
+                applyGroup(mask, true);
+            }
+        }
+    }
+
+    const IMPROVE_TRIALS = 15;
+    let bestCount = bestMasks.length;
+    for (let trial = 0; trial < IMPROVE_TRIALS; trial++) {
+        const removeCount = Math.min(3, bestMasks.length - 1, 1 + Math.floor(Math.random() * 3));
+        const tempMasks = bestMasks.filter(() => true);
+        for (let r = 0; r < removeCount; r++) {
+            const idx = Math.floor(Math.random() * tempMasks.length);
+            tempMasks.splice(idx, 1);
+        }
+        const newMasks = solveFromPartial(tempMasks, 500, 1000);
+        if (newMasks && newMasks.length < bestCount) {
+            bestMasks = newMasks;
+            bestCount = newMasks.length;
+            log(`Improved: reduced to ${bestCount} groups`, '#E6A23C');
+        }
+    }
+
+    const resultGroups = bestMasks.map((mask, idx) => {
+        const samples = extractSetBits(mask).map(i => idxToSample[i]).sort((a,b)=>a-b);
+        const coverMask = getCoverMask(mask);
+        return { id: idx+1, samples, coveredJSubsetCount: coverMask.popcount() };
+    });
+
+    const finalCovCount = new Int32Array(totalJ);
+    const finalUnsat = new BitSet(totalJ);
+    for (const m of bestMasks) {
+        const cover = getCoverMask(m);
+        for (const bitIdx of iterateBits(cover)) {
+            if (finalCovCount[bitIdx] >= lambda) continue;
+            finalCovCount[bitIdx]++;
+            if (finalCovCount[bitIdx] >= lambda) finalUnsat.setBit(bitIdx);
+        }
+    }
+    let satisfiedFinal = 0;
+    for (let i = 0; i < totalJ; i++) if (finalCovCount[i] >= lambda) satisfiedFinal++;
+    coverageStats.value = { satisfiedRate: (satisfiedFinal/totalJ)*100, satisfied: satisfiedFinal, totalJ };
+    executionTime.value = (performance.now() - startTime) / 1000;
+    log(`Completed: ${bestMasks.length} groups, time ${executionTime.value.toFixed(2)}s`, '#67C23A');
+
+    return resultGroups;
+};
+
+            const startCalculate = async () => {
+                if (!canCalculate.value) return;
                 calculating.value = true;
+                currentDBFile.value = '';
+                const repeat = params.value.repeatCount || 1;
+                const samples = [...selectedSamples.value];
+                const { k, j, s, lambda } = params.value;
+                
+                let bestGroups = null;
+                let bestCov = null;
+                let bestTime = 0;
+                let bestLog = [];
+                let bestRunIdx = -1;
+                const allGroupCounts = [];
+
                 calcProgress.value = 0;
-                statusMsg.value = 'Covering with strength s ...';
-                results.value = [];
+                statusText.value = repeat > 1 ? `Preparing for ${repeat} independent runs...` : 'Preparing calculation...';
+                currentRepeat.value = 0;
+
                 try {
-                    const solution = await new Promise((resolve, reject) => {
-                        setTimeout(() => {
-                            try {
-                                const res = computeCoveringSimple(
-                                    selectedSamples.value,
-                                    params.value.k,
-                                    params.value.j,
-                                    params.value.s
-                                );
-                                resolve(res);
-                            } catch (err) { reject(err); }
-                        }, 20);
-                    });
-                    results.value = solution;
-                    ElMessage.success(`Done: ${solution.length} groups`);
-                    calcProgress.value = 100;
-                } catch (err) {
-                    ElMessage.error('Error: ' + err.message);
-                    addLog(`ERROR: ${err.message}`);
+                    for (let i = 1; i <= repeat; i++) {
+                        currentRepeat.value = i;
+                        statusText.value = repeat > 1 ? `Run ${i}/${repeat} in progress...` : 'Calculating...';
+                        await new Promise(r => setTimeout(r, 20));
+                        
+                        let groups;
+                        try {
+                            groups = generalCoveringDesign(samples, k, j, s, lambda);
+                        } catch (e) {
+                            log(`Run ${i} failed: ${e.message}`, '#F56C6C');
+                            allGroupCounts.push(-1);
+                            calcProgress.value = Math.round((i / repeat) * 100);
+                            continue;
+                        }
+                        
+                        const curCov = { ...coverageStats.value };
+                        const curTime = executionTime.value;
+                        const curLog = algoLog.value.map(entry => ({...entry}));
+                        
+                        allGroupCounts.push(groups.length);
+                        log(`Run ${i}/${repeat} completed: ${groups.length} groups`, '#409EFF');
+                        
+                        if (!bestGroups || groups.length < bestGroups.length || 
+                            (groups.length === bestGroups.length && curCov.satisfiedRate > bestCov.satisfiedRate)) {
+                            bestGroups = groups;
+                            bestCov = curCov;
+                            bestTime = curTime;
+                            bestLog = curLog;
+                            bestRunIdx = i;
+                        }
+                        
+                        calcProgress.value = Math.round((i / repeat) * 100);
+                        await new Promise(r => setTimeout(r, 10));
+                    }
+
+                    if (!bestGroups) {
+                        throw new Error('All calculation attempts failed, please check parameters or retry');
+                    }
+
+                    results.value = bestGroups;
+                    coverageStats.value = bestCov;
+                    executionTime.value = bestTime;
+                    algoLog.value = bestLog;
+                    currentRunCount.value++;
+                    
+                    const msg = repeat > 1 
+                        ? `Completed ${repeat} runs, optimal solution from run ${bestRunIdx} (${bestGroups.length} groups)`
+                        : `Calculation completed: ${bestGroups.length} groups`;
+                    ElMessage.success(msg);
+                    statusText.value = msg;
+                } catch (e) {
+                    ElMessage.error('Calculation failed: ' + e.message);
+                    log(`Critical error: ${e.message}`, '#F56C6C');
                 } finally {
                     calculating.value = false;
-                    statusMsg.value = '';
+                    calcProgress.value = 100;
                 }
             };
-            
-            const exportResult = () => {
-                if (results.value.length === 0) return;
-                let content = `Covering strength s=${params.value.s}\n`;
-                content += `m=${params.value.m}, n=${params.value.n}, k=${params.value.k}, j=${params.value.j}, s=${params.value.s}\n`;
-                content += `Samples: ${selectedSamples.value.join(', ')}\n`;
-                content += `Groups count: ${results.value.length}\n\n`;
-                results.value.forEach((g, idx) => {
-                    content += `Group ${idx+1}: {${g.samples.join(', ')}}\n`;
-                });
-                const blob = new Blob([content], {type: 'text/plain'});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `covering_s${params.value.s}_${Date.now()}.txt`;
-                a.click();
-                URL.revokeObjectURL(url);
-                ElMessage.success('Export complete');
+
+            const generateDBFilename = () => `${params.value.m}-${params.value.n}-${params.value.k}-${params.value.j}-${params.value.s}-${params.value.lambda}-${currentRunCount.value}-${results.value.length}`;
+            const saveToDB = () => {
+                if (results.value.length === 0) { ElMessage.warning('No results to save'); return; }
+                const filename = generateDBFilename();
+                const record = { id: Date.now(), filename, timestamp: new Date().toLocaleString(), params: { ...params.value }, samples: [...selectedSamples.value], results: JSON.parse(JSON.stringify(results.value)), coverageStats: { ...coverageStats.value }, resultCount: results.value.length };
+                dbFiles.value.unshift(record); saveDBToStorage(); lastSavedFile.value = filename;
+                ElMessage.success(`Saved: ${filename}`);
             };
-            
+            const executeDB = (file) => {
+                params.value = { ...file.params, repeatCount: params.value.repeatCount };
+                selectedSamples.value = [...file.samples];
+                results.value = JSON.parse(JSON.stringify(file.results)); 
+                coverageStats.value = { ...file.coverageStats };
+                currentDBFile.value = file.filename; 
+                currentRunCount.value = parseInt(file.filename.split('-')[6]) || 0;
+                ElMessage.success(`Loaded: ${file.filename}`);
+            };
+            const deleteDB = (id) => {
+                ElMessageBox.confirm('Confirm delete this record?', 'Confirm', { type: 'warning' }).then(() => {
+                    dbFiles.value = dbFiles.value.filter(f => f.id !== id); saveDBToStorage();
+                    ElMessage.success('Deleted');
+                }).catch(() => {});
+            };
+            const saveDBToStorage = () => localStorage.setItem(DB_STORAGE_KEY, JSON.stringify(dbFiles.value));
+            const loadDBFromStorage = () => {
+                const saved = localStorage.getItem(DB_STORAGE_KEY);
+                if (saved) { try { dbFiles.value = JSON.parse(saved); } catch (e) {} }
+            };
+            const exportResult = () => {
+                let text = `Optimal Samples Selection Result\nFile: ${currentDBFile.value || 'New'}\nParameters: m=${params.value.m}, n=${params.value.n}, k=${params.value.k}, j=${params.value.j}, s=${params.value.s}, lambda=${params.value.lambda}\nSamples: [${selectedSamples.value.join(', ')}]\nGroups: ${results.value.length}\nCoverage: ${coverageStats.value.satisfiedRate.toFixed(2)}%\n\n`;
+                results.value.forEach((g,i) => text += `Group ${i+1}: {${g.samples.join(', ')}}\n`);
+                const blob = new Blob([text], {type:'text/plain'});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${generateDBFilename()}.txt`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            };
+
+            onMounted(() => loadDBFromStorage());
+
             return {
-                params,
-                selectedSamples,
-                manualRaw,
-                parsedPreview,
-                results,
-                calculating,
-                calcProgress,
-                statusMsg,
-                logs,
-                isParamsValid,
-                canCalc,
-                parseManualInput,
-                applyManualSamples,
-                removeSampleItem,
-                clearAllSamples,
-                startCovering,
-                exportResult
+                params, selectedSamples, manualInputText, parsedSamples, results,
+                calculating, calcProgress, statusText, coverageStats, executionTime,
+                algoLog, currentRunCount, currentRepeat, lastSavedFile, currentDBFile, dbFiles,
+                isParamsValid, canCalculate,
+                parseManualInput, confirmManualInput, randomSelect, removeSample, clearSamples,
+                startCalculate, saveToDB, executeDB, deleteDB, exportResult,
             };
         }
-    }).use(ElementPlus).mount('#app');
+    };
+    createApp(App).use(ElementPlus).mount('#app');
 </script>
 </body>
 </html>
+```
